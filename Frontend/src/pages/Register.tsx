@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom'
 import logo from '@/assets/Icon.png'
 import backgroundAnimation from '@/assets/BackgroundAnimation.mp4'
 
-export default function Login() {
+export default function Register() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -40,12 +42,33 @@ export default function Login() {
               </h1>
             </div>
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white/95">Entrar na sua conta</h2>
-              <p className="mt-1 text-sm text-white/55">Continue seu diário técnico inteligente</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-white/95">Criar sua conta</h2>
+              <p className="mt-1 text-sm text-white/55">Comece a organizar seu diário técnico inteligente</p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="name" className="text-[11px] font-medium tracking-[0.16em] text-white/45 uppercase">
+                Nome
+              </label>
+              <input
+                id="name"
+                type="text"
+                autoComplete="name"
+                placeholder="Seu nome"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="
+                  w-full rounded-btn border border-white/12 bg-surface-high/85 px-3.5 py-3
+                  text-sm text-white/90 placeholder:text-white/30 outline-none
+                  transition-[border-color,box-shadow,background-color] duration-150
+                  focus:border-accent-indigo focus:bg-surface-high
+                  focus:shadow-[0_0_0_3px_rgb(99_102_241_/_0.2)]
+                "
+              />
+            </div>
+
             <div className="flex flex-col gap-1.5">
               <label htmlFor="email" className="text-[11px] font-medium tracking-[0.16em] text-white/45 uppercase">
                 E-mail
@@ -68,23 +91,38 @@ export default function Login() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-[11px] font-medium tracking-[0.16em] text-white/45 uppercase">
-                  Senha
-                </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-[11px] font-semibold tracking-[0.14em] text-accent-indigo uppercase transition-colors duration-150 hover:text-indigo-300"
-                >
-                  Esqueceu?
-                </Link>
-              </div>
+              <label htmlFor="password" className="text-[11px] font-medium tracking-[0.16em] text-white/45 uppercase">
+                Senha
+              </label>
               <input
                 id="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="
+                  w-full rounded-btn border border-white/12 bg-surface-high/85 px-3.5 py-3
+                  text-sm text-white/90 outline-none
+                  transition-[border-color,box-shadow,background-color] duration-150
+                  focus:border-accent-indigo focus:bg-surface-high
+                  focus:shadow-[0_0_0_3px_rgb(99_102_241_/_0.2)]
+                "
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="confirm-password"
+                className="text-[11px] font-medium tracking-[0.16em] text-white/45 uppercase"
+              >
+                Confirmar senha
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="
                   w-full rounded-btn border border-white/12 bg-surface-high/85 px-3.5 py-3
                   text-sm text-white/90 outline-none
@@ -99,21 +137,21 @@ export default function Login() {
               type="submit"
               className="
                 mt-2 w-full cursor-pointer rounded-btn bg-gradient-to-r
-                from-accent-indigo via-indigo-500 to-violet-500 py-3 text-xs
+                from-accent-indigo to-indigo-500 py-3 text-xs
                 font-semibold tracking-[0.16em] text-white uppercase
                 transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.99]
               "
             >
-              Entrar
+              Criar conta
             </button>
           </form>
 
           <div className="my-7 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
           <p className="text-center text-sm text-white/45">
-            Não tem conta?{' '}
-            <Link to="/register" className="font-semibold text-white/90 transition-colors duration-150 hover:text-white">
-              Cadastre-se
+            Já tem conta?{' '}
+            <Link to="/login" className="font-semibold text-white/90 transition-colors duration-150 hover:text-white">
+              Entrar
             </Link>
           </p>
         </section>

@@ -1,172 +1,15 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import icon from '@/assets/Icon.png'
 import { useAuthProfile } from '@/hooks/useAuthProfile'
 import { useAppStore } from '@/store/useAppStore'
 import './Projects.css'
 
-// ── Types ──────────────────────────────────────────────────────────────────
-
-interface Project {
-  id: string
-  name: string
-  description: string
-  stack: string[]
-  status: 'ativo' | 'revisao' | 'pausado'
-  lastSession: string
-  taskCount: number
-  doneCount: number
-  iconPath: ReactNode
-}
-
-// ── Mock data ──────────────────────────────────────────────────────────────
-
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: '1',
-    name: 'API de Autenticação',
-    description:
-      'JWT com refresh tokens, controle de sessão e revogação segura. Implementação de middleware de roles.',
-    stack: ['Node.js', 'TypeScript', 'PostgreSQL'],
-    status: 'ativo',
-    lastSession: '2h atrás',
-    taskCount: 14,
-    doneCount: 11,
-    iconPath: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-      </svg>
-    ),
-  },
-  {
-    id: '2',
-    name: 'Painel de Métricas',
-    description:
-      'Dashboard de latência e throughput de endpoints. Gráficos em tempo real com polling e cache de curta duração.',
-    stack: ['React', 'Recharts', 'Redis'],
-    status: 'revisao',
-    lastSession: '1d atrás',
-    taskCount: 9,
-    doneCount: 7,
-    iconPath: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-      </svg>
-    ),
-  },
-  {
-    id: '3',
-    name: 'Pipeline de Ingestão',
-    description:
-      'Processamento assíncrono de eventos com Dead Letter Queue e retry exponencial. Integração com S3.',
-    stack: ['Python', 'RabbitMQ', 'Docker'],
-    status: 'ativo',
-    lastSession: '15m atrás',
-    taskCount: 6,
-    doneCount: 3,
-    iconPath: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-      </svg>
-    ),
-  },
-]
-
-// ── Sub-components ─────────────────────────────────────────────────────────
-
-const statusConfig = {
-  ativo: {
-    label: 'ATIVO',
-    dot: 'bg-accent-indigo',
-    badge: 'border-accent-indigo/25 bg-accent-indigo/10 text-accent-indigo',
-  },
-  revisao: {
-    label: 'REVISÃO',
-    dot: 'bg-accent-violet',
-    badge: 'border-accent-violet/25 bg-accent-violet/10 text-accent-violet',
-  },
-  pausado: {
-    label: 'PAUSADO',
-    dot: 'bg-white/25',
-    badge: 'border-white/10 bg-white/5 text-white/35',
-  },
-}
-
-function ProjectCard({ project }: { project: Project }) {
-  const cfg = statusConfig[project.status]
-  const progress = Math.round((project.doneCount / project.taskCount) * 100)
-
-  return (
-    <article
-      className="group relative flex flex-col rounded-card border border-white/8 bg-surface-container p-5 transition-[border-color,background-color,box-shadow] duration-200 hover:border-white/14 hover:bg-surface-high hover:shadow-[0_0_0_1px_rgba(99,102,241,0.08),0_8px_32px_rgba(0,0,0,0.3)]"
-    >
-      {/* Top row: icon + status */}
-      <div className="mb-5 flex items-start justify-between">
-        <div className="flex h-9 w-9 items-center justify-center rounded-btn bg-surface-high text-white/50 transition-colors duration-200 group-hover:text-white/70">
-          {project.iconPath}
-        </div>
-        <span className={`inline-flex items-center gap-1.5 rounded-[4px] border px-2 py-0.5 text-[10px] font-semibold tracking-[0.16em] ${cfg.badge}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-          {cfg.label}
-        </span>
-      </div>
-
-      {/* Name + description */}
-      <h3 className="mb-1.5 text-sm font-semibold text-white/90 leading-snug">{project.name}</h3>
-      <p className="mb-4 text-xs leading-relaxed text-white/40 line-clamp-2">{project.description}</p>
-
-      {/* Stack tags */}
-      <div className="mb-5 flex flex-wrap gap-1.5">
-        {project.stack.map((tag) => (
-          <span
-            key={tag}
-            className="rounded-[4px] border border-white/8 bg-surface-base px-2 py-0.5 text-[10px] font-medium tracking-wide text-white/40"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      {/* Progress bar */}
-      <div className="mb-4">
-        <div className="h-px w-full rounded-full bg-white/6">
-          <div
-            className="h-px rounded-full bg-gradient-to-r from-accent-indigo to-accent-violet transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <p className="mt-1.5 text-[10px] text-white/30">
-          {project.doneCount}/{project.taskCount} tarefas concluídas
-        </p>
-      </div>
-
-      {/* Footer row */}
-      <div className="mt-auto flex items-center justify-between">
-        <span className="text-[10px] tracking-[0.12em] text-white/25 uppercase">
-          Última sessão: {project.lastSession}
-        </span>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-white/20 transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:text-accent-indigo/60"
-        >
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
-      </div>
-    </article>
-  )
-}
-
-function CreateCard() {
+function CreateCard({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="group relative flex flex-col items-center justify-center gap-3 rounded-card border border-dashed border-accent-indigo/30 bg-accent-indigo/[0.04] p-5 text-center transition-[border-color,background-color] duration-200 hover:border-accent-indigo/50 hover:bg-accent-indigo/[0.07]"
       style={{ minHeight: '220px' }}
     >
@@ -196,8 +39,9 @@ export default function Projects() {
   const navigate = useNavigate()
   const { logout } = useAppStore()
   const { displayName, email, initials } = useAuthProfile()
+  const projects: Array<{ id: string; name: string; description: string; stack: string[] }> = []
 
-  const filtered = MOCK_PROJECTS.filter(
+  const filtered = projects.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -283,21 +127,32 @@ export default function Projects() {
               <div ref={menuRef} className="relative">
                 <button
                   type="button"
-                  title={displayName}
+                  title={displayName ?? email ?? 'Conta'}
                   onClick={() => setMenuOpen((value) => !value)}
                   className="rounded-btn border border-white/8 bg-surface-container p-1.5 transition-[border-color,background-color] duration-150 hover:border-white/14 hover:bg-surface-high"
                 >
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent-indigo to-accent-violet text-[10px] font-bold text-white">
-                    {initials}
+                    {initials || (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21a8 8 0 0 0-16 0" />
+                        <circle cx="12" cy="8" r="4" />
+                      </svg>
+                    )}
                   </div>
                 </button>
 
                 {menuOpen && (
                   <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-52 rounded-card border border-white/8 bg-surface-container shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
                     <div className="border-b border-white/6 px-3.5 py-3">
-                      <p className="truncate text-[13px] font-medium text-white/90">{displayName}</p>
-                      {email && (
-                        <p className="mt-0.5 truncate text-[11px] text-white/35">{email}</p>
+                      {(displayName || email) ? (
+                        <>
+                          {displayName && <p className="truncate text-[13px] font-medium text-white/90">{displayName}</p>}
+                          {email && (
+                            <p className="mt-0.5 truncate text-[11px] text-white/35">{email}</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="truncate text-[13px] font-medium text-white/90">Minha conta</p>
                       )}
                     </div>
 
@@ -373,29 +228,39 @@ export default function Projects() {
 
           {/* Grid */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <CreateCard />
+            <CreateCard onClick={() => navigate('/chat')} />
             {filtered.length > 0
-              ? filtered.map((p) => <ProjectCard key={p.id} project={p} />)
-              : search && (
-                <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center lg:col-span-2">
-                  <p className="text-sm text-white/35">Nenhum projeto encontrado para "{search}"</p>
-                  <button
-                    type="button"
-                    onClick={() => setSearch('')}
-                    className="mt-3 text-xs font-semibold text-accent-indigo/70 underline-offset-2 hover:underline transition-colors duration-150"
-                  >
-                    Limpar filtro
-                  </button>
+              ? null
+              : (
+                <div className="col-span-1 flex flex-col items-center justify-center rounded-card border border-white/8 bg-surface-container/65 px-6 py-16 text-center sm:col-span-2 lg:col-span-2">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-surface-high text-white/35">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="16" rx="2" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  </div>
+                  {search ? (
+                    <>
+                      <p className="text-sm text-white/35">Nenhum projeto encontrado para "{search}"</p>
+                      <button
+                        type="button"
+                        onClick={() => setSearch('')}
+                        className="mt-3 text-xs font-semibold text-accent-indigo/70 underline-offset-2 transition-colors duration-150 hover:underline"
+                      >
+                        Limpar filtro
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-white/60">Nenhum projeto criado ainda.</p>
+                    </>
+                  )}
                 </div>
               )}
           </div>
 
-          {/* Projects count */}
-          {!search && (
-            <p className="mt-6 text-center text-[11px] tracking-[0.1em] text-white/20">
-              {MOCK_PROJECTS.length} projeto{MOCK_PROJECTS.length !== 1 ? 's' : ''} registrado{MOCK_PROJECTS.length !== 1 ? 's' : ''}
-            </p>
-          )}
         </main>
 
         {/* ── Footer ──────────────────────────────────────────────────────── */}

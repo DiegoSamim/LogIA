@@ -78,19 +78,7 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
           <path d="M9 18l6-6-6-6" />
         </svg>
 
-        <span className="hidden shrink-0 font-semibold text-white/80 sm:block">LogIA-Beta-01</span>
-
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="hidden text-white/18 sm:block">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-
         <span className="truncate font-medium text-white/60">{pageLabel}</span>
-
-        {/* Status badge */}
-        <span className="ml-1 hidden items-center gap-1.5 rounded-[4px] border border-accent-indigo/22 bg-accent-indigo/8 px-2 py-0.5 text-[10px] font-semibold tracking-[0.16em] text-accent-indigo/80 uppercase lg:inline-flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent-indigo/70 animate-pulse" />
-          Active_Build
-        </span>
       </div>
 
       {/* ── Right — actions ───────────────────────────────────────────── */}
@@ -116,7 +104,7 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
         <div ref={menuRef} className="relative">
           <button
             type="button"
-            title={displayName}
+            title={displayName ?? email ?? 'Conta'}
             onClick={() => setMenuOpen((v) => !v)}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-accent-indigo to-accent-violet text-[11px] font-bold text-white shadow-[0_0_0_2px_rgba(139,92,246,0.2)] transition-shadow duration-150 hover:shadow-[0_0_0_2px_rgba(139,92,246,0.4)]"
           >
@@ -127,9 +115,15 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
             <div className="absolute right-0 top-[calc(100%+8px)] w-52 rounded-card border border-white/8 bg-surface-container shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
               {/* User info */}
               <div className="border-b border-white/6 px-3.5 py-3">
-                <p className="text-[13px] font-medium text-white/90 truncate">{displayName}</p>
-                {email && (
-                  <p className="mt-0.5 text-[11px] text-white/35 truncate">{email}</p>
+                {(displayName || email) ? (
+                  <>
+                    {displayName && <p className="text-[13px] font-medium text-white/90 truncate">{displayName}</p>}
+                    {email && (
+                      <p className="mt-0.5 text-[11px] text-white/35 truncate">{email}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[13px] font-medium text-white/90 truncate">Minha conta</p>
                 )}
               </div>
 

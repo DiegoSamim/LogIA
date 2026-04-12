@@ -64,22 +64,21 @@ export function useAuthProfile() {
   }, [accessToken, currentUser, setCurrentUser])
 
   const tokenPayload = parseTokenPayload(accessToken)
-  const displayName =
-    firstNonEmpty([
-      currentUser?.name,
-      tokenPayload?.name,
-      tokenPayload?.full_name,
-      tokenPayload?.given_name,
-      tokenPayload?.username,
-      tokenPayload?.email,
-    ]) ?? 'Usuário'
+  const displayName = firstNonEmpty([
+    currentUser?.name,
+    tokenPayload?.name,
+    tokenPayload?.full_name,
+    tokenPayload?.given_name,
+    tokenPayload?.username,
+  ])
 
   const email = firstNonEmpty([currentUser?.email, tokenPayload?.email])
+  const initials = getInitials(displayName ?? '')
 
   return {
     currentUser,
     displayName,
     email,
-    initials: getInitials(displayName),
+    initials,
   }
 }

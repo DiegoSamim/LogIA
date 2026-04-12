@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthProfile } from '@/hooks/useAuthProfile'
+import { authService } from '@/services/auth.service'
 import { useAppStore } from '@/store/useAppStore'
 
 // ── Breadcrumb map ─────────────────────────────────────────────────────────
@@ -41,9 +42,10 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
   }, [menuOpen])
 
   function handleLogout() {
+    authService.logoutOptimistic()
     logout()
     setMenuOpen(false)
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   return (

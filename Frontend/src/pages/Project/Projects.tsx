@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import icon from '@/assets/Icon.png'
 import { useAuthProfile } from '@/hooks/useAuthProfile'
+import { authService } from '@/services/auth.service'
 import { useAppStore } from '@/store/useAppStore'
 import './Projects.css'
 
@@ -62,9 +63,10 @@ export default function Projects() {
   }, [menuOpen])
 
   function handleLogout() {
+    authService.logoutOptimistic()
     logout()
     setMenuOpen(false)
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   return (

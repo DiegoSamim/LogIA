@@ -26,6 +26,13 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
     )
 
 
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=REFRESH_COOKIE,
+        path="/api/v1/auth",
+    )
+
+
 @router.post("/register", response_model=TokenResponse, status_code=201)
 async def register(
     data: RegisterRequest,
@@ -66,6 +73,17 @@ async def refresh(
     user, access_token, raw_refresh = await auth_service.refresh(db, refresh_token)
     _set_refresh_cookie(response, raw_refresh)
     return TokenResponse(access_token=access_token)
+
+
+@router.post("/logout", status_code=204)
+async def logout(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE),
+):
+    await auth_service.logout(db, refresh_token)
+    _clear_refresh_cookie(response)
+    return Response(status_code=204)
 
 
 @router.get("/me", response_model=UserResponse)

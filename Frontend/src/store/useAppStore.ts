@@ -4,15 +4,22 @@ import type { UserDTO } from '@/data/dtos'
 interface AppState {
   accessToken: string | null
   currentUser: UserDTO | null
+  authReady: boolean
   setAccessToken: (token: string | null) => void
   setCurrentUser: (user: UserDTO | null) => void
+  setAuthReady: (ready: boolean) => void
   logout: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
   accessToken: null,
   currentUser: null,
-  setAccessToken: (token) => set({ accessToken: token }),
+  authReady: false,
+  setAccessToken: (token) => {
+    if (token) localStorage.removeItem('session_ended')
+    set({ accessToken: token })
+  },
   setCurrentUser: (user) => set({ currentUser: user }),
-  logout: () => set({ accessToken: null, currentUser: null }),
+  setAuthReady: (ready) => set({ authReady: ready }),
+  logout: () => set({ accessToken: null, currentUser: null, authReady: true }),
 }))

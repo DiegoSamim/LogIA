@@ -101,6 +101,26 @@ async def refresh(db: AsyncSession, raw_token: str) -> tuple[User, str, str]:
     return user, access_token, raw_refresh
 
 
+async def logout(db: AsyncSession, raw_token: str | None) -> None:
+    if not raw_token:
+        return
+
+    result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.revoked_at.is_(None),
+            RefreshToken.expires_at > datetime.now(timezone.utc),
+        )
+    )
+    tokens = result.scalars().all()
+
+    for rt in tokens:
+        if verify_refresh_token(raw_token, rt.token_hash):
+            rt.revoked_at = datetime.now(timezone.utc)
+            db.add(rt)
+            await db.commit()
+            return
+
+
 async def _issue_tokens(
     db: AsyncSession,
     user: User,

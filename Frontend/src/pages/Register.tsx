@@ -1,17 +1,59 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import logo from '@/assets/Icon.png'
 import backgroundAnimation from '@/assets/BackgroundAnimation.mp4'
+import { EyeIcon, EyeOffIcon } from '@/components/icons/PasswordVisibilityIcons'
+import { authService } from '@/services/auth.service'
+import { useAppStore } from '@/store/useAppStore'
+
+const PASSWORD_RULES = [
+  { label: 'Mínimo 8 caracteres', test: (p: string) => p.length >= 8 },
+  { label: 'Pelo menos uma letra', test: (p: string) => /[a-zA-Z]/.test(p) },
+  { label: 'Pelo menos um número', test: (p: string) => /[0-9]/.test(p) },
+]
 
 export default function Register() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [showRules, setShowRules] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+  const { setAccessToken, setCurrentUser } = useAppStore()
 
-  function handleSubmit(e: React.FormEvent) {
+  const passwordValid = PASSWORD_RULES.every((r) => r.test(password))
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    // TODO: integrate with auth service
+    setError(null)
+
+    if (!passwordValid) {
+      setShowRules(true)
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { data } = await authService.register({ name, email, password })
+      setAccessToken(data.access_token)
+      const { data: user } = await authService.me()
+      setCurrentUser(user)
+      navigate('/projects')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail
+      setError(msg ?? 'Erro ao criar conta. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -47,6 +89,12 @@ export default function Register() {
             </div>
           </div>
 
+          {error && (
+            <p className="mb-4 rounded-btn border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+              {error}
+            </p>
+          )}
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="name" className="text-[11px] font-medium tracking-[0.16em] text-white/45 uppercase">
@@ -64,7 +112,7 @@ export default function Register() {
                   text-sm text-white/90 placeholder:text-white/30 outline-none
                   transition-[border-color,box-shadow,background-color] duration-150
                   focus:border-accent-indigo focus:bg-surface-high
-                  focus:shadow-[0_0_0_3px_rgb(99_102_241_/_0.2)]
+                  focus:shadow-[0_0_0_3px_rgb(99_102_241/0.2)]
                 "
               />
             </div>
@@ -85,31 +133,65 @@ export default function Register() {
                   text-sm text-white/90 placeholder:text-white/30 outline-none
                   transition-[border-color,box-shadow,background-color] duration-150
                   focus:border-accent-indigo focus:bg-surface-high
-                  focus:shadow-[0_0_0_3px_rgb(99_102_241_/_0.2)]
+                  focus:shadow-[0_0_0_3px_rgb(99_102_241/0.2)]
                 "
               />
             </div>
 
+            {/* Senha */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="password" className="text-[11px] font-medium tracking-[0.16em] text-white/45 uppercase">
                 Senha
               </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="
-                  w-full rounded-btn border border-white/12 bg-surface-high/85 px-3.5 py-3
-                  text-sm text-white/90 outline-none
-                  transition-[border-color,box-shadow,background-color] duration-150
-                  focus:border-accent-indigo focus:bg-surface-high
-                  focus:shadow-[0_0_0_3px_rgb(99_102_241_/_0.2)]
-                "
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    if (showRules) setShowRules(true)
+                  }}
+                  className="
+                    w-full rounded-btn border border-white/12 bg-surface-high/85 px-3.5 py-3 pr-10
+                    text-sm text-white/90 outline-none
+                    transition-[border-color,box-shadow,background-color] duration-150
+                    focus:border-accent-indigo focus:bg-surface-high
+                    focus:shadow-[0_0_0_3px_rgb(99_102_241/0.2)]
+                  "
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 transition-colors duration-150 hover:text-white/60"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
+
+              {/* Requisitos — aparecem só após tentativa de envio */}
+              {showRules && (
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {PASSWORD_RULES.map((rule) => {
+                    const ok = rule.test(password)
+                    return (
+                      <li key={rule.label} className="flex items-center gap-1.5">
+                        <span className={`text-[10px] transition-colors duration-150 ${ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {ok ? '✓' : '✗'}
+                        </span>
+                        <span className={`text-[11px] transition-colors duration-150 ${ok ? 'text-white/50' : 'text-white/35'}`}>
+                          {rule.label}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
             </div>
 
+            {/* Confirmar senha */}
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="confirm-password"
@@ -117,32 +199,44 @@ export default function Register() {
               >
                 Confirmar senha
               </label>
-              <input
-                id="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="
-                  w-full rounded-btn border border-white/12 bg-surface-high/85 px-3.5 py-3
-                  text-sm text-white/90 outline-none
-                  transition-[border-color,box-shadow,background-color] duration-150
-                  focus:border-accent-indigo focus:bg-surface-high
-                  focus:shadow-[0_0_0_3px_rgb(99_102_241_/_0.2)]
-                "
-              />
+              <div className="relative">
+                <input
+                  id="confirm-password"
+                  type={showConfirm ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="
+                    w-full rounded-btn border border-white/12 bg-surface-high/85 px-3.5 py-3 pr-10
+                    text-sm text-white/90 outline-none
+                    transition-[border-color,box-shadow,background-color] duration-150
+                    focus:border-accent-indigo focus:bg-surface-high
+                    focus:shadow-[0_0_0_3px_rgb(99_102_241/0.2)]
+                  "
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 transition-colors duration-150 hover:text-white/60"
+                  tabIndex={-1}
+                >
+                  {showConfirm ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
+              disabled={loading}
               className="
                 mt-2 w-full cursor-pointer rounded-btn bg-gradient-to-r
                 from-accent-indigo to-indigo-500 py-3 text-xs
                 font-semibold tracking-[0.16em] text-white uppercase
                 transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.99]
+                disabled:cursor-not-allowed disabled:opacity-50
               "
             >
-              Criar conta
+              {loading ? 'Criando conta...' : 'Criar conta'}
             </button>
           </form>
 

@@ -1,5 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import icon from '@/assets/Icon.png'
+import { useAuthProfile } from '@/hooks/useAuthProfile'
+import { useAppStore } from '@/store/useAppStore'
 import './Projects.css'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -17,8 +20,6 @@ interface Project {
 }
 
 // ── Mock data ──────────────────────────────────────────────────────────────
-
-const MOCK_USER = { initials: 'DS' }
 
 const MOCK_PROJECTS: Project[] = [
   {
@@ -190,6 +191,11 @@ function CreateCard() {
 
 export default function Projects() {
   const [search, setSearch] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+  const { logout } = useAppStore()
+  const { displayName, email, initials } = useAuthProfile()
 
   const filtered = MOCK_PROJECTS.filter(
     (p) =>
@@ -197,6 +203,25 @@ export default function Projects() {
       p.description.toLowerCase().includes(search.toLowerCase()) ||
       p.stack.some((s) => s.toLowerCase().includes(search.toLowerCase())),
   )
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
+
+  function handleLogout() {
+    logout()
+    setMenuOpen(false)
+    navigate('/login')
+  }
 
   return (
     <div className="relative isolate min-h-svh overflow-hidden bg-surface-base text-white">
@@ -255,10 +280,43 @@ export default function Projects() {
               </button>
 
               {/* User info */}
-              <div className="rounded-btn border border-white/8 bg-surface-container p-1.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent-indigo to-accent-violet text-[10px] font-bold text-white">
-                  {MOCK_USER.initials}
-                </div>
+              <div ref={menuRef} className="relative">
+                <button
+                  type="button"
+                  title={displayName}
+                  onClick={() => setMenuOpen((value) => !value)}
+                  className="rounded-btn border border-white/8 bg-surface-container p-1.5 transition-[border-color,background-color] duration-150 hover:border-white/14 hover:bg-surface-high"
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent-indigo to-accent-violet text-[10px] font-bold text-white">
+                    {initials}
+                  </div>
+                </button>
+
+                {menuOpen && (
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-52 rounded-card border border-white/8 bg-surface-container shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                    <div className="border-b border-white/6 px-3.5 py-3">
+                      <p className="truncate text-[13px] font-medium text-white/90">{displayName}</p>
+                      {email && (
+                        <p className="mt-0.5 truncate text-[11px] text-white/35">{email}</p>
+                      )}
+                    </div>
+
+                    <div className="p-1">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2 text-[13px] text-white/55 transition-[background-color,color] duration-150 hover:bg-surface-high hover:text-red-400"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                          <polyline points="16 17 21 12 16 7" />
+                          <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        Sair
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

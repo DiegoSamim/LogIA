@@ -32,7 +32,7 @@ export default function App() {
             <Route path="/dashboard" element={<div />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/tasks" element={<div />} />
-            <Route path="/sobre" element={<Sobre />} />
+            <Route path="/projects/:projectId/sobre" element={<Sobre />} />
           </Route>
         </Route>
 

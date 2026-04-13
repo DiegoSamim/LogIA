@@ -1,5 +1,6 @@
-import { NavLink, Link } from 'react-router-dom'
+import { NavLink, Link, useLocation } from 'react-router-dom'
 import icon from '@/assets/Icon.png'
+import { useAppStore } from '@/store/useAppStore'
 
 // ── Nav items ──────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ const NAV_ITEMS = [
   },
   {
     label: 'Sobre',
-    to: '/sobre',
+    to: '/projects',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -56,6 +57,9 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { pathname } = useLocation()
+  const { currentProject } = useAppStore()
+
   return (
     <aside
       className={[
@@ -88,37 +92,44 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* ── Navigation ────────────────────────────────────────────────── */}
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2 pt-3">
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map((item) => {
+          const isAboutItem = item.label === 'Sobre'
+          const to = isAboutItem && currentProject?.id ? `/projects/${currentProject.id}/sobre` : item.to
+          const isAboutActive = isAboutItem && pathname.startsWith('/projects/') && pathname.endsWith('/sobre')
+
+          return (
           <NavLink
-            key={item.to}
-            to={item.to}
+            key={`${item.label}-${to}`}
+            to={to}
             className={({ isActive }) =>
               [
                 'group flex items-center gap-3 rounded-btn px-3 py-2.5 text-sm transition-colors duration-150',
-                isActive
+                isActive || isAboutActive
                   ? 'bg-surface-high text-white/90'
                   : 'text-white/38 hover:bg-surface-container hover:text-white/70',
               ].join(' ')
             }
           >
-            {({ isActive }) => (
+            {({ isActive }) => {
+              const active = isActive || isAboutActive
+              return (
               <>
                 <span
                   className={[
                     'shrink-0 transition-colors duration-150',
-                    isActive ? 'text-accent-indigo' : 'text-white/30 group-hover:text-white/55',
+                    active ? 'text-accent-indigo' : 'text-white/30 group-hover:text-white/55',
                   ].join(' ')}
                 >
                   {item.icon}
                 </span>
                 <span className="text-[13px] font-medium leading-none">{item.label}</span>
-                {isActive && (
+                {active && (
                   <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-accent-indigo/70" />
                 )}
               </>
-            )}
+            )}}
           </NavLink>
-        ))}
+        )})}
       </nav>
 
       {/* ── Nova Sessão ──────────────────────────────────────────────── */}

@@ -7,7 +7,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 
 # import models so their metadata is registered
-from app.models import user  # noqa: F401
+from app.models import user, project  # noqa: F401
 
 config = context.config
 

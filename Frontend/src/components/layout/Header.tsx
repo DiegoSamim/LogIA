@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, matchPath } from 'react-router-dom'
 import type { ChatMode } from '@/data/dtos'
 import { useAuthProfile } from '@/hooks/useAuthProfile'
 import { authService } from '@/services/auth.service'
@@ -23,10 +23,10 @@ interface HeaderProps {
 export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const pageLabel = ROUTE_LABELS[pathname] ?? 'LogIA'
+  const projectAboutMatch = matchPath('/projects/:projectId/sobre', pathname)
   const isChatRoute = pathname === '/chat'
 
-  const { logout } = useAppStore()
+  const { logout, currentProject } = useAppStore()
   const { displayName, email, initials } = useAuthProfile()
   const { mode, setMode } = useChatUiStore()
 
@@ -73,18 +73,39 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
           </button>
         )}
 
-        <Link
-          to="/projects"
-          className="hidden shrink-0 font-medium text-white/35 transition-colors duration-150 hover:text-white/60 sm:block"
-        >
-          Projetos
-        </Link>
+        {projectAboutMatch ? (
+          <>
+            <Link
+              to="/projects"
+              className="hidden shrink-0 font-medium text-white/35 transition-colors duration-150 hover:text-white/60 sm:block"
+            >
+              Projetos
+            </Link>
 
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="hidden text-white/18 sm:block">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="hidden text-white/18 sm:block">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
 
-        <span className="truncate font-medium text-white/60">{pageLabel}</span>
+            <span className="truncate font-medium text-white/60">
+              {currentProject?.name ?? 'Projeto'}
+            </span>
+          </>
+        ) : (
+          <>
+            <Link
+              to="/projects"
+              className="hidden shrink-0 font-medium text-white/35 transition-colors duration-150 hover:text-white/60 sm:block"
+            >
+              Projetos
+            </Link>
+
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="hidden text-white/18 sm:block">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+
+            <span className="truncate font-medium text-white/60">{ROUTE_LABELS[pathname] ?? 'LogIA'}</span>
+          </>
+        )}
       </div>
 
       {/* ── Center — chat mode toggle (only in chat route) ─────────────────────────────────────────── */}

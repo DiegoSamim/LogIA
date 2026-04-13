@@ -41,6 +41,32 @@ body {
   min-height: 100svh;
 }
 
+html,
+body {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(99 102 241 / 0.35) rgb(255 255 255 / 0.04);
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: rgb(255 255 255 / 0.03);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgb(99 102 241 / 0.6), rgb(139 92 246 / 0.52))
+    padding-box;
+}
+
 button:not(:disabled),
 a,
 [role="button"] {

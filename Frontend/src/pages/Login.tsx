@@ -53,7 +53,9 @@ export default function Login() {
         <section className="w-full max-w-[460px] rounded-[20px] border border-white/10 bg-surface-container/90 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-8">
           <div className="mb-8 flex flex-col items-center gap-4 text-center">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="Logo da LogIA" className="h-12 w-auto object-contain" />
+              <img onClick={() => {
+                navigate('/Home')
+              }} src={logo} alt="Logo da LogIA" className="h-12 w-auto object-contain hover: cursor-pointer" />
               <h1 className="text-3xl leading-none text-white/95 font-['Sora']">
                 <span className="font-semibold">Log</span>
                 <span className="font-bold tracking-[0.04em] text-accent-violet font-['Space_Grotesk']">

@@ -8,6 +8,7 @@ import Login from '@/pages/Login'
 import Register from '@/pages/Register'
 import Projects from '@/pages/Project/Projects'
 import Sobre from '@/pages/Sobre'
+import Chat from '@/pages/Chat/Chat'
 
 export default function App() {
   useAuthInit()
@@ -29,7 +30,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<div />} />
-            <Route path="/chat" element={<div />} />
+            <Route path="/chat" element={<Chat />} />
             <Route path="/tasks" element={<div />} />
             <Route path="/sobre" element={<Sobre />} />
           </Route>

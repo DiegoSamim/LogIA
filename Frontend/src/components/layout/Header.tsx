@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import type { ChatMode } from '@/data/dtos'
 import { useAuthProfile } from '@/hooks/useAuthProfile'
 import { authService } from '@/services/auth.service'
 import { useAppStore } from '@/store/useAppStore'
+import { useChatUiStore } from '@/store/useChatUiStore'
 
 // ── Breadcrumb map ─────────────────────────────────────────────────────────
 
@@ -22,9 +24,11 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const pageLabel = ROUTE_LABELS[pathname] ?? 'LogIA'
+  const isChatRoute = pathname === '/chat'
 
   const { logout } = useAppStore()
   const { displayName, email, initials } = useAuthProfile()
+  const { mode, setMode } = useChatUiStore()
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -52,7 +56,7 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
     <header className="sticky top-0 z-20 flex h-[52px] shrink-0 items-center justify-between border-b border-white/[0.06] bg-surface-base/85 px-3 backdrop-blur-xl sm:px-3">
 
       {/* ── Left — breadcrumb ─────────────────────────────────────────── */}
-      <div className="flex min-w-0 flex-1 items-center gap-2 text-[13px]">
+      <div className="flex min-w-0 items-center gap-2 text-[13px] ">
         {!isSidebarOpen && (
           <button
             type="button"
@@ -82,6 +86,36 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
 
         <span className="truncate font-medium text-white/60">{pageLabel}</span>
       </div>
+
+      {/* ── Center — chat mode toggle (only in chat route) ─────────────────────────────────────────── */}
+      {isChatRoute && (
+        <div className="hidden px-4 md:flex md:flex-1 md:justify-center" >
+          <div className="chat-toggle-pill inline-flex rounded-full border border-white/8 bg-surface-container/72 p-1">
+            {([
+              ['register', 'Registro'],
+              ['query', 'Consulta'],
+            ] as Array<[ChatMode, string]>).map(([value, label]) => {
+              const active = mode === value
+
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMode(value)}
+                  className={[
+                    'rounded-full px-3.5 py-2 text-[10px] font-semibold tracking-[0.2em] uppercase transition-[background-color,color,box-shadow,transform] duration-200',
+                    active
+                      ? 'chat-toggle-active bg-linear-to-r from-accent-indigo to-accent-violet text-white'
+                      : 'text-white/40 hover:text-white/72',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Right — actions ───────────────────────────────────────────── */}
       <div className="ml-2 flex shrink-0 items-center gap-1.5 sm:gap-2">

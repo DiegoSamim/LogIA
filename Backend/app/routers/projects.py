@@ -23,8 +23,16 @@ async def list_projects(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    projects = await project_service.list_by_user(db, current_user.id)
-    return [ProjectResponse.from_orm(p) for p in projects]
+    rows = await project_service.list_by_user(db, current_user.id)
+    return [
+        ProjectResponse.from_orm(
+            row["project"],
+            task_count=row["task_count"],
+            done_count=row["done_count"],
+            last_session_at=row["last_session_at"],
+        )
+        for row in rows
+    ]
 
 
 @router.post("", response_model=ProjectDetailResponse, status_code=201)

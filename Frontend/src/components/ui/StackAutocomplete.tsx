@@ -81,7 +81,7 @@ export default function StackAutocomplete({
       renderValue={(selected, getItemProps) =>
         selected.map((option, index) => {
           const stringValue = typeof option === 'string' ? option : String(option)
-          const { key, onDelete, className: _className, ...tagProps } = getItemProps({ index })
+          const { key, onDelete, ...tagProps } = getItemProps({ index })
           return (
             <div
               key={key ?? `${stringValue}-${index}`}

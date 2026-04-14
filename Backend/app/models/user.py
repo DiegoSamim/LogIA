@@ -26,6 +26,21 @@ class User(Base, TimestampMixin):
     projects: Mapped[list["Project"]] = relationship(  # type: ignore[name-defined]
         back_populates="user", cascade="all, delete-orphan"
     )
+    project_members: Mapped[list["ProjectMember"]] = relationship(  # type: ignore[name-defined]
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    tasks: Mapped[list["Task"]] = relationship(  # type: ignore[name-defined]
+        foreign_keys="Task.created_by", back_populates="creator", cascade="all, delete-orphan"
+    )
+    task_updates: Mapped[list["TaskUpdate"]] = relationship(  # type: ignore[name-defined]
+        foreign_keys="TaskUpdate.created_by", back_populates="creator", cascade="all, delete-orphan"
+    )
+    task_attachments: Mapped[list["TaskAttachment"]] = relationship(  # type: ignore[name-defined]
+        foreign_keys="TaskAttachment.uploaded_by", back_populates="uploader", cascade="all, delete-orphan"
+    )
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(  # type: ignore[name-defined]
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class RefreshToken(Base):

@@ -1,11 +1,14 @@
 import uuid
+from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.chat import ChatSession
 from app.models.project import Project, ProjectProfile
+from app.models.task import Task
 from app.schemas.project import ProjectCreate, ProjectProfileUpdate, ProjectUpdate
 
 
@@ -30,21 +33,49 @@ async def create(db: AsyncSession, user_id: uuid.UUID, data: ProjectCreate) -> P
     return await _fetch(db, project.id)
 
 
-async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Project]:
+async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[dict[str, Any]]:
+    task_count_sq = (
+        select(func.count(Task.id))
+        .where(Task.project_id == Project.id)
+        .correlate(Project)
+        .scalar_subquery()
+    )
+    done_count_sq = (
+        select(func.count(Task.id))
+        .where(Task.project_id == Project.id, Task.status == "done")
+        .correlate(Project)
+        .scalar_subquery()
+    )
+    last_session_sq = (
+        select(func.max(ChatSession.started_at))
+        .where(ChatSession.project_id == Project.id)
+        .correlate(Project)
+        .scalar_subquery()
+    )
+
     result = await db.execute(
-        select(Project)
+        select(
+            Project,
+            task_count_sq.label("task_count"),
+            done_count_sq.label("done_count"),
+            last_session_sq.label("last_session_at"),
+        )
         .where(Project.user_id == user_id)
         .options(selectinload(Project.profile))
         .order_by(Project.created_at.desc())
     )
-    return list(result.scalars().all())
+    rows = result.all()
+    return [
+        {"project": p, "task_count": tc or 0, "done_count": dc or 0, "last_session_at": ls}
+        for p, tc, dc, ls in rows
+    ]
 
 
 async def get_detail(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> Project:
     result = await db.execute(
         select(Project)
         .where(Project.id == project_id, Project.user_id == user_id)
-        .options(selectinload(Project.profile))
+        .options(selectinload(Project.profile), selectinload(Project.members))
     )
     project = result.scalar_one_or_none()
     if not project:
@@ -93,6 +124,6 @@ async def _fetch(db: AsyncSession, project_id: uuid.UUID) -> Project:
     result = await db.execute(
         select(Project)
         .where(Project.id == project_id)
-        .options(selectinload(Project.profile))
+        .options(selectinload(Project.profile), selectinload(Project.members))
     )
     return result.scalar_one()

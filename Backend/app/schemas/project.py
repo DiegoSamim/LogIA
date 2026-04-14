@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -95,7 +97,14 @@ class ProjectResponse(BaseModel):
     created_at: str
 
     @classmethod
-    def from_orm(cls, project) -> "ProjectResponse":
+    def from_orm(
+        cls,
+        project,
+        *,
+        task_count: int = 0,
+        done_count: int = 0,
+        last_session_at=None,
+    ) -> "ProjectResponse":
         profile = project.profile
         return cls(
             id=str(project.id),
@@ -105,20 +114,41 @@ class ProjectResponse(BaseModel):
             color=project.color,
             repository_url=project.repository_url,
             stack=profile.main_stack if profile else [],
-            task_count=0,
-            done_count=0,
-            last_session_at=None,
+            task_count=task_count,
+            done_count=done_count,
+            last_session_at=last_session_at.isoformat() if last_session_at else None,
             created_at=project.created_at.isoformat(),
+        )
+
+
+class ProjectMemberSimpleResponse(BaseModel):
+    id: str
+    user_id: str
+    project_id: str
+    role: str
+    created_at: str
+
+    @classmethod
+    def from_orm(cls, member) -> "ProjectMemberSimpleResponse":
+        return cls(
+            id=str(member.id),
+            user_id=str(member.user_id),
+            project_id=str(member.project_id),
+            role=member.role,
+            created_at=member.created_at.isoformat(),
         )
 
 
 class ProjectDetailResponse(ProjectResponse):
     profile: ProjectProfileResponse | None
+    members: list[ProjectMemberSimpleResponse]
 
     @classmethod
     def from_orm(cls, project) -> "ProjectDetailResponse":  # type: ignore[override]
         base = ProjectResponse.from_orm(project)
+        members = getattr(project, "members", []) or []
         return cls(
             **base.model_dump(),
             profile=ProjectProfileResponse.from_orm(project.profile) if project.profile else None,
+            members=[ProjectMemberSimpleResponse.from_orm(m) for m in members],
         )

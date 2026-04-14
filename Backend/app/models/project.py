@@ -27,6 +27,18 @@ class Project(Base, TimestampMixin):
         back_populates="project", cascade="all, delete-orphan", uselist=False
     )
     user: Mapped["User"] = relationship(back_populates="projects")  # type: ignore[name-defined]
+    members: Mapped[list["ProjectMember"]] = relationship(  # type: ignore[name-defined]
+        back_populates="project", cascade="all, delete-orphan"
+    )
+    tasks: Mapped[list["Task"]] = relationship(  # type: ignore[name-defined]
+        back_populates="project", cascade="all, delete-orphan"
+    )
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(  # type: ignore[name-defined]
+        back_populates="project", cascade="all, delete-orphan"
+    )
+    knowledge_chunks: Mapped[list["KnowledgeChunk"]] = relationship(  # type: ignore[name-defined]
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class ProjectProfile(Base):

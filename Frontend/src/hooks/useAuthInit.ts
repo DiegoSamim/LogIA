@@ -32,5 +32,5 @@ export function useAuthInit() {
       .finally(() => {
         setAuthReady(true)
       })
-  }, [])
+  }, [setAccessToken, setAuthReady, setCurrentUser])
 }

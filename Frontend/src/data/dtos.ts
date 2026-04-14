@@ -181,6 +181,38 @@ export interface TaskCheckpointDTO {
   updated_at: string   // source: task_checkpoints.updated_at
 }
 
+export interface CreateTaskRequest {
+  title: string
+  feature_or_ticket?: string | null
+  what_was_done?: string | null
+  technical_approach?: string | null
+  category?: TaskCategory
+  status?: TaskStatus
+  priority?: string | null
+  blocked_reason?: string | null
+  next_steps?: string | null
+  people_involved?: string | null
+  tags?: string[]
+  started_at?: string | null
+  completed_at?: string | null
+}
+
+export interface UpdateTaskRequest {
+  title?: string
+  feature_or_ticket?: string | null
+  what_was_done?: string | null
+  technical_approach?: string | null
+  category?: TaskCategory
+  status?: TaskStatus
+  priority?: string | null
+  blocked_reason?: string | null
+  next_steps?: string | null
+  people_involved?: string | null
+  tags?: string[] | null
+  started_at?: string | null
+  completed_at?: string | null
+}
+
 // ── Chat ────────────────────────────────────────────────────────────────────
 
 /**
@@ -212,4 +244,16 @@ export interface ChatMessageDTO {
   content: string                         // source: chat_messages.content
   metadata: Record<string, unknown> | null // source: chat_messages.metadata (JSONB)
   created_at: string                      // source: chat_messages.created_at
+}
+
+export interface CreateChatSessionRequest {
+  mode: ChatMode
+  title?: string | null
+}
+
+export interface CreateChatMessageRequest {
+  sender: Sender
+  message_type?: string
+  content: string
+  metadata?: Record<string, unknown> | null
 }

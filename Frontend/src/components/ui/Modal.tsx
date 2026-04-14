@@ -38,23 +38,25 @@ export default function Modal({
         type="button"
         aria-label="Fechar modal"
         onClick={onClose}
-        className="absolute inset-0 bg-surface-base/72 backdrop-blur-sm"
+        className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.14),transparent_30%),rgba(13,15,20,0.82)] backdrop-blur-md"
       />
 
-      <div className="relative z-10 w-full max-w-lg rounded-[22px] border border-white/8 bg-surface-container/96 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-        <div className="border-b border-white/6 px-5 py-4 sm:px-6">
+      <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(19,22,30,0.98),rgba(13,15,20,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.18),transparent_72%)]" />
+        <div className="relative border-b border-white/6 px-5 py-5 sm:px-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight text-white/92">{title}</h2>
+              <p className="text-[10px] font-semibold tracking-[0.2em] text-accent-indigo/70 uppercase">Detalhes</p>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight text-white/94">{title}</h2>
               {description && (
-                <p className="mt-1.5 text-sm leading-6 text-white/46">{description}</p>
+                <p className="mt-2 text-sm leading-6 text-white/46">{description}</p>
               )}
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-white/8 bg-surface-high/76 text-white/34 transition-[border-color,color,background-color] duration-150 hover:border-white/14 hover:bg-surface-high hover:text-white/72"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-white/8 bg-surface-high/76 text-white/34 transition-[border-color,color,background-color] duration-150 hover:border-white/14 hover:bg-surface-high hover:text-white/72"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -64,10 +66,10 @@ export default function Modal({
           </div>
         </div>
 
-        {children && <div className="px-5 py-5 sm:px-6">{children}</div>}
+        {children && <div className="relative px-5 py-5 sm:px-6">{children}</div>}
 
         {footer && (
-          <div className="flex flex-wrap justify-end gap-2 border-t border-white/6 px-5 py-4 sm:px-6">
+          <div className="relative flex flex-wrap justify-end gap-2 border-t border-white/6 px-5 py-4 sm:px-6">
             {footer}
           </div>
         )}

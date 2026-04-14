@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { ChatMode } from '@/data/dtos'
 import icon from '@/assets/Icon.png'
+import StackAutocomplete from '@/components/ui/StackAutocomplete'
+import StackBadge from '@/components/ui/StackBadge'
 import { useAuthProfile } from '@/hooks/useAuthProfile'
 import { useChatUiStore } from '@/store/useChatUiStore'
 import { projectService } from '@/services/project.service'
@@ -79,9 +81,7 @@ const REGISTER_COPY = {
             <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Stack</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {['React', 'TypeScript', 'Tailwind'].map((item) => (
-                <span key={item} className="rounded-full border border-accent-indigo/18 bg-accent-indigo/8 px-2.5 py-1 text-[11px] text-accent-indigo/88">
-                  {item}
-                </span>
+                <StackBadge key={item} value={item} compact />
               ))}
             </div>
           </div>
@@ -193,8 +193,8 @@ const PROJECT_QUESTIONS: ProjectQuestion[] = [
   },
   {
     field: 'stack',
-    question: 'Qual a stack principal? Separe as tecnologias por vírgula.',
-    placeholder: 'Ex: React, Node.js, PostgreSQL, TypeScript',
+    question: 'Qual a stack principal? Você pode selecionar tecnologias conhecidas ou adicionar entradas personalizadas.',
+    placeholder: 'Busque stacks como React, Python, PostgreSQL...',
     required: false,
     hint: 'Opcional',
   },
@@ -236,6 +236,48 @@ function getProjectDraftValue(draft: ProjectDraft, field: ProjectQuestion['field
   }
 
   return draft[field] ?? ''
+}
+
+function submitProjectStackAnswer({
+  selected,
+  step,
+  projectDraft,
+  setProjectMessages,
+  setProjectDraft,
+  setStep,
+  setPhase,
+}: {
+  selected: string[] | null
+  step: number
+  projectDraft: ProjectDraft
+  setProjectMessages: React.Dispatch<React.SetStateAction<ChatMessageViewModel[]>>
+  setProjectDraft: React.Dispatch<React.SetStateAction<ProjectDraft>>
+  setStep: React.Dispatch<React.SetStateAction<number>>
+  setPhase: React.Dispatch<React.SetStateAction<'questions' | 'summary' | 'saving' | 'done'>>
+}) {
+  const value = selected?.filter(Boolean) ?? []
+  const userContent = value.length > 0 ? value.join(', ') : '— pulei esta pergunta'
+
+  setProjectMessages((prev) => [
+    ...prev,
+    { id: `user-${step}`, sender: 'user', tone: 'highlight', content: userContent },
+  ])
+
+  const updated = { ...projectDraft, stack: value }
+  setProjectDraft(updated)
+
+  const nextStep = step + 1
+  if (nextStep < PROJECT_QUESTIONS.length) {
+    setStep(nextStep)
+    setTimeout(() => {
+      setProjectMessages((prev) => [
+        ...prev,
+        { id: `np-${nextStep}`, sender: 'assistant', tone: 'standard', content: PROJECT_QUESTIONS[nextStep].question },
+      ])
+    }, 350)
+  } else {
+    setPhase('summary')
+  }
 }
 
 // ── Shared display components ──────────────────────────────────────────────
@@ -382,7 +424,7 @@ function ProjectSummaryCard({
                 <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30 uppercase">Stack</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {draft.stack.map((tech) => (
-                    <span key={tech} className="rounded-full border border-accent-indigo/18 bg-accent-indigo/8 px-2.5 py-1 text-[11px] text-accent-indigo/88">{tech}</span>
+                    <StackBadge key={tech} value={tech} />
                   ))}
                 </div>
               </div>
@@ -592,7 +634,7 @@ export default function Chat() {
               <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Stack</p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {projectDraft.stack.map((t) => (
-                  <span key={t} className="rounded-full border border-accent-indigo/18 bg-accent-indigo/8 px-2 py-0.5 text-[10px] text-accent-indigo/80">{t}</span>
+                  <StackBadge key={t} value={t} compact />
                 ))}
               </div>
             </div>
@@ -732,24 +774,64 @@ export default function Chat() {
                       <p className="mb-2 text-[10px] tracking-[0.16em] text-white/28 uppercase">{currentQ.hint}</p>
                     )}
                     <form
-                      onSubmit={(e) => { e.preventDefault(); submitProjectAnswer(projectInput) }}
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        if (currentQ.field === 'stack') {
+                          submitProjectStackAnswer({
+                            selected: projectDraft.stack,
+                            step,
+                            projectDraft,
+                            setProjectMessages,
+                            setProjectDraft,
+                            setStep,
+                            setPhase,
+                          })
+                          return
+                        }
+                        submitProjectAnswer(projectInput)
+                      }}
                       className="rounded-3xl border border-white/8 bg-surface-container/86 p-3 shadow-[0_16px_42px_rgba(0,0,0,0.24)]"
                     >
                       <div className="flex items-end gap-3">
-                        <textarea
-                          ref={projectTextareaRef}
-                          rows={1}
-                          value={projectInput}
-                          onChange={handleProjectInputChange}
-                          placeholder={currentQ.placeholder}
-                          className="min-h-11 flex-1 resize-none overflow-hidden rounded-[18px] border border-white/7 bg-surface-base/88 px-4 py-3 text-sm leading-6 text-white/86 outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-white/24 focus:border-accent-indigo/38 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
-                          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitProjectAnswer(projectInput) } }}
-                        />
+                        {currentQ.field === 'stack' ? (
+                          <div className="flex-1">
+                            <StackAutocomplete
+                              value={projectDraft.stack}
+                              onChange={(value) => setProjectDraft((current) => ({ ...current, stack: value }))}
+                              placeholder={currentQ.placeholder}
+                              allowCustom
+                            />
+                          </div>
+                        ) : (
+                          <textarea
+                            ref={projectTextareaRef}
+                            rows={1}
+                            value={projectInput}
+                            onChange={handleProjectInputChange}
+                            placeholder={currentQ.placeholder}
+                            className="min-h-11 flex-1 resize-none overflow-hidden rounded-[18px] border border-white/7 bg-surface-base/88 px-4 py-3 text-sm leading-6 text-white/86 outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-white/24 focus:border-accent-indigo/38 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
+                            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitProjectAnswer(projectInput) } }}
+                          />
+                        )}
                         <div className="flex shrink-0 items-end gap-2">
                           {!currentQ.required && (
                             <button
                               type="button"
-                              onClick={() => submitProjectAnswer(null)}
+                              onClick={() => {
+                                if (currentQ.field === 'stack') {
+                                  submitProjectStackAnswer({
+                                    selected: null,
+                                    step,
+                                    projectDraft,
+                                    setProjectMessages,
+                                    setProjectDraft,
+                                    setStep,
+                                    setPhase,
+                                  })
+                                  return
+                                }
+                                submitProjectAnswer(null)
+                              }}
                               className="h-11 rounded-[18px] border border-white/10 bg-surface-high px-4 text-xs font-medium text-white/40 transition-[border-color,color] duration-150 hover:border-white/20 hover:text-white/65"
                             >
                               Pular
@@ -757,10 +839,10 @@ export default function Chat() {
                           )}
                           <button
                             type="submit"
-                            disabled={currentQ.required && !projectInput.trim()}
+                            disabled={currentQ.field !== 'stack' && currentQ.required && !projectInput.trim()}
                             className="h-11 min-w-28 rounded-[18px] bg-linear-to-r from-accent-indigo to-accent-violet px-4 text-xs font-semibold tracking-[0.18em] text-white uppercase transition-[filter,transform,opacity] duration-150 hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
                           >
-                            Enviar
+                            {currentQ.field === 'stack' ? 'Continuar' : 'Enviar'}
                           </button>
                         </div>
                       </div>

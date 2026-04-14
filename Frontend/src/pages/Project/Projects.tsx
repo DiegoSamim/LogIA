@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import icon from '@/assets/Icon.png'
+import StackBadge from '@/components/ui/StackBadge'
 import { useAuthProfile } from '@/hooks/useAuthProfile'
 import { authService } from '@/services/auth.service'
 import { projectService } from '@/services/project.service'
@@ -10,22 +11,54 @@ import './Projects.css'
 
 // ── Project card ───────────────────────────────────────────────────────────
 
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Ativo',
+  paused: 'Pausado',
+  archived: 'Arquivado',
+}
+
+function formatStatus(status: string): string {
+  return STATUS_LABELS[status] ?? status
+}
+
+function alphaColor(color: string, opacityPercent: number): string {
+  return `color-mix(in srgb, ${color} ${opacityPercent}%, transparent)`
+}
+
 function ProjectCard({ project, onSelect }: { project: ProjectDTO; onSelect: () => void }) {
   const statusColor: Record<string, string> = {
     active: 'text-emerald-400',
     paused: 'text-amber-400',
     archived: 'text-white/30',
   }
+  const accentColor = project.color ?? '#6366F1'
 
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="group relative flex flex-col gap-4 rounded-card border border-white/8 bg-surface-container/80 p-5 text-left transition-[border-color,background-color,transform] duration-200 hover:border-accent-indigo/30 hover:bg-surface-container hover:-translate-y-0.5"
-      style={{ minHeight: '220px' }}
+      className="group relative flex flex-col gap-4 overflow-hidden rounded-card border border-white/8 bg-surface-container/80 p-5 text-left transition-[border-color,background-color,transform,box-shadow] duration-200 hover:bg-surface-container hover:-translate-y-0.5"
+      style={{
+        minHeight: '220px',
+        borderColor: alphaColor(accentColor, 28),
+        boxShadow: `0 0 0 1px ${alphaColor(accentColor, 12)}, 0 0 16px ${alphaColor(accentColor, 10)}, 0 12px 30px rgba(0,0,0,0.18)`,
+      }}
     >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 rounded-card opacity-100 transition-opacity duration-200"
+        style={{
+          boxShadow: `inset 0 0 0 1px ${alphaColor(accentColor, 16)}, inset 0 0 16px ${alphaColor(accentColor, 5)}, 0 0 22px ${alphaColor(accentColor, 8)}`,
+        }}
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-4 top-0 h-12 rounded-full blur-2xl"
+        style={{ background: `radial-gradient(circle, ${alphaColor(accentColor, 12)} 0%, transparent 72%)` }}
+      />
+
       {/* Color dot + name */}
-      <div className="flex items-center gap-2.5">
+      <div className="relative z-10 flex items-center gap-2.5">
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-full"
           style={{ backgroundColor: project.color ?? '#6366F1' }}
@@ -37,21 +70,16 @@ function ProjectCard({ project, onSelect }: { project: ProjectDTO; onSelect: () 
 
       {/* Description */}
       {project.description && (
-        <p className="line-clamp-2 flex-1 text-xs leading-5 text-white/40">
+        <p className="relative z-10 line-clamp-2 flex-1 text-xs leading-5 text-white/40">
           {project.description}
         </p>
       )}
 
       {/* Stack chips */}
       {project.stack.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="relative z-10 flex flex-wrap gap-1.5">
           {project.stack.slice(0, 4).map((tech) => (
-            <span
-              key={tech}
-              className="rounded-full border border-accent-indigo/18 bg-accent-indigo/8 px-2 py-0.5 text-[10px] text-accent-indigo/80"
-            >
-              {tech}
-            </span>
+            <StackBadge key={tech} value={tech} compact />
           ))}
           {project.stack.length > 4 && (
             <span className="rounded-full border border-white/8 px-2 py-0.5 text-[10px] text-white/30">
@@ -62,9 +90,9 @@ function ProjectCard({ project, onSelect }: { project: ProjectDTO; onSelect: () 
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-white/5 pt-3">
+      <div className="relative z-10 flex items-center justify-between border-t border-white/5 pt-3">
         <span className={`text-[10px] font-semibold tracking-[0.14em] uppercase ${statusColor[project.status] ?? 'text-white/30'}`}>
-          {project.status}
+          {formatStatus(project.status)}
         </span>
         <span className="text-[10px] text-white/24">
           {project.task_count} {project.task_count === 1 ? 'tarefa' : 'tarefas'}
@@ -72,7 +100,7 @@ function ProjectCard({ project, onSelect }: { project: ProjectDTO; onSelect: () 
       </div>
 
       {/* Hover arrow */}
-      <span className="absolute right-4 top-4 text-white/20 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+      <span className="absolute right-4 top-4 z-10 text-white/20 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>

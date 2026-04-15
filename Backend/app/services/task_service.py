@@ -1,13 +1,65 @@
 import uuid
+from pathlib import Path
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import get_settings
 from app.models.project import Project
-from app.models.task import Task, TaskCheckpoint, TaskUpdate
-from app.schemas.task import TaskCheckpointCreate, TaskCheckpointPatch, TaskCreate, TaskPatch, TaskUpdateCreate
+from app.models.task import Task, TaskAttachment, TaskCheckpoint, TaskUpdate
+from app.schemas.task import TaskCheckpointBatchCreate, TaskCheckpointCreate, TaskCheckpointPatch, TaskCreate, TaskPatch, TaskUpdateCreate
+
+settings = get_settings()
+
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def _compose_task_update_details(
+    *,
+    what_was_done: str | None = None,
+    technical_approach: str | None = None,
+    next_steps: str | None = None,
+    blocked_reason: str | None = None,
+) -> str | None:
+    parts: list[str] = []
+    if what_was_done:
+        parts.append(f"Resumo: {what_was_done}")
+    if technical_approach:
+        parts.append(f"Abordagem técnica: {technical_approach}")
+    if next_steps:
+        parts.append(f"Próximos passos: {next_steps}")
+    if blocked_reason:
+        parts.append(f"Motivo do bloqueio: {blocked_reason}")
+    return "\n\n".join(parts) if parts else None
+
+
+def _build_initial_update(task: Task, data: TaskCreate, user_id: uuid.UUID) -> TaskUpdate:
+    summary = data.what_was_done or f'Tarefa "{task.title}" criada.'
+    details = _compose_task_update_details(
+        what_was_done=data.what_was_done,
+        technical_approach=data.technical_approach,
+        next_steps=data.next_steps,
+        blocked_reason=data.blocked_reason,
+    )
+    return TaskUpdate(
+        id=uuid.uuid4(),
+        task_id=task.id,
+        created_by=user_id,
+        update_type="created",
+        summary=summary,
+        details=details,
+        new_status=task.status,
+    )
 
 
 async def _verify_task_ownership(db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID) -> Task:
@@ -58,14 +110,7 @@ async def create(
     db.add(task)
     await db.flush()
 
-    initial_update = TaskUpdate(
-        id=uuid.uuid4(),
-        task_id=task.id,
-        created_by=user_id,
-        update_type="created",
-        summary=f'Tarefa "{task.title}" criada.',
-        new_status=task.status,
-    )
+    initial_update = _build_initial_update(task, data, user_id)
     db.add(initial_update)
 
     await db.commit()
@@ -95,22 +140,9 @@ async def update(
     task = await _verify_task_ownership(db, task_id, user_id)
 
     patch = data.model_dump(exclude_none=True)
-    old_status = task.status
-    new_status = patch.get("status")
 
     for field, value in patch.items():
         setattr(task, field, value)
-
-    if new_status and new_status != old_status:
-        status_update = TaskUpdate(
-            id=uuid.uuid4(),
-            task_id=task.id,
-            created_by=user_id,
-            update_type="status_change",
-            old_status=old_status,
-            new_status=new_status,
-        )
-        db.add(status_update)
 
     await db.commit()
     return await _fetch(db, task.id)
@@ -191,6 +223,72 @@ async def update_checkpoint(
     await db.commit()
     await db.refresh(cp)
     return cp
+
+
+async def create_checkpoints_batch(
+    db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskCheckpointBatchCreate
+) -> list[TaskCheckpoint]:
+    await _verify_task_ownership(db, task_id, user_id)
+    checkpoints = [
+        TaskCheckpoint(
+            id=uuid.uuid4(),
+            task_id=task_id,
+            description=item.description,
+            order_index=item.order_index,
+        )
+        for item in data.items
+    ]
+    db.add_all(checkpoints)
+    await db.commit()
+    for cp in checkpoints:
+        await db.refresh(cp)
+    return checkpoints
+
+
+async def create_attachment(
+    db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, file: UploadFile
+) -> TaskAttachment:
+    await _verify_task_ownership(db, task_id, user_id)
+
+    mime = file.content_type or ""
+    if mime not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Tipo de arquivo não permitido: {mime}. Use PDF ou imagem.",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Arquivo excede o tamanho máximo permitido de 10 MB.",
+        )
+
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_ext = Path(file.filename or "file").suffix
+    unique_name = f"{uuid.uuid4()}{file_ext}"
+    dest = upload_dir / unique_name
+    dest.write_bytes(content)
+
+    file_type = "pdf" if mime == "application/pdf" else "image"
+    file_url = f"/files/{unique_name}"
+
+    att = TaskAttachment(
+        id=uuid.uuid4(),
+        task_id=task_id,
+        uploaded_by=user_id,
+        file_name=file.filename or unique_name,
+        file_url=file_url,
+        file_type=file_type,
+        mime_type=mime,
+        file_size=len(content),
+    )
+    db.add(att)
+    await db.commit()
+    await db.refresh(att)
+    return att
 
 
 async def _fetch(db: AsyncSession, task_id: uuid.UUID) -> Task:

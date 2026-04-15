@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     FRONTEND_URL: str = "http://localhost:5173"
     APP_ENV: str = "development"
+    UPLOAD_DIR: str = "./uploads"
 
 
 @lru_cache

@@ -1,18 +1,32 @@
-import type { TaskRegisterDraft, TaskRegisterProgressItem, TaskLookup } from '@/pages/Chat/types'
-import { getSelectedTask, getTaskStatusLabel } from '@/pages/Chat/utils'
+import type { TaskDTO } from '@/data/dtos'
+import type { TaskRegisterDraft, TaskRegisterProgressItem, TaskLookup, TaskUpdatePreview } from '@/pages/Chat/types'
+import { STATUS_CHIP_OPTIONS } from '@/pages/Chat/constants'
+import { getSelectedTask, getUpdateTypeLabel } from '@/pages/Chat/utils'
+
+function StatusChip({ status }: { status: string }) {
+  const option = STATUS_CHIP_OPTIONS.find((o) => o.value === status)
+  const colorClass = option?.colorClass ?? 'text-white/40 bg-white/6 border-white/10'
+  return (
+    <span className={`inline-flex items-center rounded-[5px] border px-1.5 py-0.5 text-[10px] font-medium ${colorClass}`}>
+      {option?.label ?? status}
+    </span>
+  )
+}
 
 export default function TaskContextPanel({
   draft,
   tasks,
   projectName,
   progress,
+  updates = [],
 }: {
   draft: TaskRegisterDraft
-  tasks: TaskLookup[]
+  tasks: TaskLookup[] | TaskDTO[]
   projectName: string | null
   progress: TaskRegisterProgressItem[]
+  updates?: TaskUpdatePreview[]
 }) {
-  const selectedTask = getSelectedTask(tasks, draft.taskId)
+  const selectedTask = getSelectedTask(tasks as TaskLookup[], draft.taskId)
 
   return (
     <div className="space-y-4">
@@ -28,10 +42,10 @@ export default function TaskContextPanel({
         </p>
       </div>
 
-      {draft.action === 'create' && draft.taskTitle && (
+      {draft.action === 'create' && draft.title && (
         <div>
           <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Título</p>
-          <p className="mt-1 text-xs text-white/76">{draft.taskTitle}</p>
+          <p className="mt-1 text-xs text-white/76">{draft.title}</p>
         </div>
       )}
 
@@ -39,32 +53,51 @@ export default function TaskContextPanel({
         <div>
           <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Tarefa selecionada</p>
           <p className="mt-1 text-xs text-white/76">{selectedTask.title}</p>
-          <p className="mt-1 text-[11px] text-white/36">{getTaskStatusLabel(selectedTask.status)}</p>
+          <div className="mt-1.5">
+            <StatusChip status={selectedTask.status} />
+          </div>
         </div>
       )}
 
-      {draft.currentStatus && (
-        <div>
-          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Status atual</p>
-          <p className="mt-1 text-xs text-white/76">{getTaskStatusLabel(draft.currentStatus)}</p>
-        </div>
-      )}
-
-      {draft.newStatus && (
+      {draft.status && draft.action === 'update' && (
         <div>
           <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Novo status</p>
-          <p className="mt-1 text-xs text-white/76">{getTaskStatusLabel(draft.newStatus)}</p>
+          <div className="mt-1.5">
+            <StatusChip status={draft.status} />
+          </div>
         </div>
       )}
 
-      {draft.summary && (
+      {draft.status && draft.action === 'create' && (
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Status</p>
+          <div className="mt-1.5">
+            <StatusChip status={draft.status} />
+          </div>
+        </div>
+      )}
+
+      {draft.what_was_done && (
         <div>
           <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Resumo</p>
-          <p className="mt-1 text-xs leading-5 text-white/60">{draft.summary}</p>
+          <p className="mt-1 text-xs leading-5 text-white/60">{draft.what_was_done}</p>
         </div>
       )}
 
-      {!draft.action && !draft.taskTitle && !draft.summary && (
+      {draft.tags.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Tags</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {draft.tags.map((tag) => (
+              <span key={tag} className="rounded-[5px] border border-accent-indigo/16 bg-accent-indigo/7 px-1.5 py-0.5 text-[10px] text-accent-indigo/72">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!draft.action && !draft.title && !draft.what_was_done && (
         <p className="text-xs text-white/28 italic">As respostas aparecerão aqui conforme você preenche.</p>
       )}
 
@@ -92,6 +125,30 @@ export default function TaskContextPanel({
           ))}
         </div>
       </div>
+
+      {draft.action === 'update' && updates.length > 0 && (
+        <div className="border-t border-white/6 pt-4">
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Últimos updates</p>
+          <div className="mt-3 space-y-3">
+            {updates.slice(0, 3).map((update) => (
+              <div key={update.id} className="rounded-[8px] border border-white/6 bg-surface-base/64 px-3 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-medium text-white/68">{getUpdateTypeLabel(update.update_type)}</p>
+                  <p className="text-[10px] text-white/34">
+                    {new Intl.DateTimeFormat('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                    }).format(new Date(update.created_at))}
+                  </p>
+                </div>
+                {update.summary && (
+                  <p className="mt-2 line-clamp-3 text-[11px] leading-5 text-white/56">{update.summary}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

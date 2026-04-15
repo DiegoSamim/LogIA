@@ -1,25 +1,68 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { ChatSessionDTO, TaskDTO } from '@/data/dtos'
+import type { TaskStatus } from '@/data/dtos'
+import type { ChatSessionDTO, TaskDTO, TaskUpdateDTO } from '@/data/dtos'
 import { chatService } from '@/services/chat.service'
 import { taskService } from '@/services/task.service'
 import type { ChatMessageViewModel, SidePanelSection, TaskRegisterDraft, TaskRegisterFlowProps } from '@/pages/Chat/types'
-import { buildActionSelectionMessage, buildCreateTaskSummary, buildInitialTaskRegisterMessages, buildNextQuestionMessage, buildTaskErrorMessage, buildTaskSuccessMessage, buildUpdateTaskSummary, getActionLabel, getSelectedTask, getTaskFieldValue, getTaskQuestions, getTaskRegisterProgress } from '@/pages/Chat/utils'
-import ChatMessage from '@/pages/Chat/components/ChatMessage'
-import SidePanel from '@/pages/Chat/components/SidePanel'
+import {
+  buildActionSelectionMessage,
+  buildCreateTaskSummary,
+  buildInitialTaskRegisterMessages,
+  buildNextQuestionMessage,
+  buildTaskErrorMessage,
+  buildTaskSuccessMessage,
+  buildTaskUpdatePayload,
+  buildUpdateTaskSummary,
+  getActionLabel,
+  getActiveQuestions,
+  getSelectedTask,
+  getTaskQuestions,
+  getTaskRegisterProgress,
+} from '@/pages/Chat/utils'
+import ChatMessage from '@/components/chat/ChatMessage'
+import SidePanel from '@/components/chat/SidePanel'
+import LogoAvatar from '@/components/chat/LogoAvatar'
 import TaskActionCard from '@/pages/Chat/components/TaskActionCard'
 import TaskContextPanel from '@/pages/Chat/components/TaskContextPanel'
 import TaskPickerCard from '@/pages/Chat/components/TaskPickerCard'
+import AttachmentUploadStep from '@/pages/Chat/components/AttachmentUploadStep'
 import TaskQuestionInput from '@/pages/Chat/components/TaskQuestionInput'
 import TaskSummaryCard from '@/pages/Chat/components/TaskSummaryCard'
-import LogoAvatar from '@/pages/Chat/components/LogoAvatar'
 
 const EMPTY_DRAFT: TaskRegisterDraft = {
   action: null,
   taskId: null,
-  taskTitle: '',
-  currentStatus: null,
-  newStatus: null,
-  summary: '',
+  title: '',
+  category: null,
+  status: null,
+  priority: null,
+  feature_or_ticket: '',
+  what_was_done: '',
+  technical_approach: '',
+  next_steps: '',
+  blocked_reason: '',
+  people_involved: '',
+  tags: [],
+  checkpoints: [],
+}
+
+function formatRecentTaskDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Data indisponível'
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date).replace('.', '').toUpperCase()
+}
+
+function getStatusTone(status: TaskStatus) {
+  if (status === 'done') return 'text-emerald-300'
+  if (status === 'blocked') return 'text-rose-300'
+  if (status === 'cancelled') return 'text-white/36'
+  if (status === 'in_progress') return 'text-amber-300'
+  return 'text-sky-300'
 }
 
 export default function TaskRegisterFlow({
@@ -31,13 +74,16 @@ export default function TaskRegisterFlow({
 }: TaskRegisterFlowProps) {
   const [session, setSession] = useState<ChatSessionDTO | null>(null)
   const [tasks, setTasks] = useState<TaskDTO[]>([])
+  const [selectedTaskUpdates, setSelectedTaskUpdates] = useState<TaskUpdateDTO[]>([])
   const [loading, setLoading] = useState(true)
-  const [phase, setPhase] = useState<'loading' | 'choose-action' | 'pick-task' | 'questions' | 'summary' | 'saving' | 'done' | 'error'>('loading')
+  const [phase, setPhase] = useState<'loading' | 'choose-action' | 'pick-task' | 'questions' | 'summary' | 'saving' | 'attachments' | 'done' | 'error'>('loading')
+  const [createdTaskId, setCreatedTaskId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessageViewModel[]>([])
   const [draft, setDraft] = useState<TaskRegisterDraft>(EMPTY_DRAFT)
   const [step, setStep] = useState(0)
-  const [inputValue, setInputValue] = useState('')
   const [saving, setSaving] = useState(false)
+  const [isBusy, setIsBusy] = useState(false)
+  const [busyMessage, setBusyMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -98,10 +144,15 @@ export default function TaskRegisterFlow({
     }
   }, [projectId, projectName])
 
-  const currentQuestions = useMemo(() => getTaskQuestions(draft.action), [draft.action])
-  const currentQuestion = currentQuestions[step]
+  const allQuestions = useMemo(() => getTaskQuestions(draft.action), [draft.action])
+  const activeQuestions = useMemo(() => getActiveQuestions(draft, allQuestions), [draft, allQuestions])
+  const currentQuestion = activeQuestions[step]
+
   const selectedTask = getSelectedTask(tasks, draft.taskId)
   const progress = getTaskRegisterProgress({ action: draft.action, phase, draft })
+  const recentTasks = [...tasks]
+    .sort((a, b) => new Date(b.updated_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.created_at).getTime())
+    .slice(0, 4)
 
   const panelSections: SidePanelSection[] = [
     {
@@ -112,18 +163,44 @@ export default function TaskRegisterFlow({
           tasks={tasks}
           projectName={projectName}
           progress={progress}
+          updates={selectedTaskUpdates}
         />
       ),
     },
-    {
-      title: 'Sessão',
-      content: (
-        <div className="space-y-2 text-xs text-white/56">
-          <p className="text-white/78">{session ? 'Sessão ativa de registro pronta para novos lançamentos.' : 'Sessão ainda não iniciada.'}</p>
-          <p>{tasks.length} {tasks.length === 1 ? 'tarefa encontrada' : 'tarefas encontradas'} neste projeto.</p>
-        </div>
-      ),
-    },
+    ...(recentTasks.length > 0
+      ? [{
+          title: `Últimas tarefas${tasks.length > 0 ? ` (${tasks.length})` : ''}`,
+          content: (
+            <div className="space-y-3">
+              {recentTasks.map((task) => (
+                <article key={task.id} className="rounded-lg border border-white/6 bg-surface-base/64 px-3 py-3">
+                  <p className="text-[12px] leading-5 text-white/78">{task.title}</p>
+                  <div className="mt-3 grid grid-cols-[1fr_auto] gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold tracking-[0.16em] text-white/26 uppercase">Status</p>
+                      <p className={`mt-1 text-[11px] font-medium ${getStatusTone(task.status)}`}>
+                        {task.status === 'in_progress'
+                          ? 'Em progresso'
+                          : task.status === 'done'
+                          ? 'Concluída'
+                          : task.status === 'blocked'
+                          ? 'Bloqueada'
+                          : task.status === 'cancelled'
+                          ? 'Cancelada'
+                          : 'A fazer'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-semibold tracking-[0.16em] text-white/26 uppercase">Data</p>
+                      <p className="mt-1 text-[11px] text-white/50">{formatRecentTaskDate(task.updated_at ?? task.created_at)}</p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ),
+        }]
+      : []),
   ]
 
   async function addSessionMessage(message: { sender: 'assistant' | 'user'; content: string; metadata?: Record<string, unknown> | null }) {
@@ -142,8 +219,8 @@ export default function TaskRegisterFlow({
 
   function resetFlow(assistantMessage?: ChatMessageViewModel) {
     setDraft(EMPTY_DRAFT)
+    setSelectedTaskUpdates([])
     setStep(0)
-    setInputValue('')
     setPhase('choose-action')
     setError(null)
     setMessages((prev) => [
@@ -158,7 +235,38 @@ export default function TaskRegisterFlow({
     setTasks(data)
   }
 
+  async function reloadSelectedTaskUpdates(taskId: string | null) {
+    if (!taskId) {
+      setSelectedTaskUpdates([])
+      return
+    }
+
+    try {
+      const { data } = await taskService.listUpdates(taskId)
+      setSelectedTaskUpdates(
+        [...data].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        ),
+      )
+    } catch {
+      setSelectedTaskUpdates([])
+    }
+  }
+
+  function startBusy(message: string) {
+    setIsBusy(true)
+    setBusyMessage(message)
+  }
+
+  function stopBusy() {
+    setIsBusy(false)
+    setBusyMessage(null)
+  }
+
   async function handleSelectAction(action: 'create' | 'update') {
+    if (isBusy || saving) return
+    startBusy(action === 'create' ? 'Preparando o fluxo de criação da tarefa...' : 'Carregando a seleção de tarefas...')
+
     const userMessage: ChatMessageViewModel = {
       id: `user-action-${Date.now()}`,
       sender: 'user',
@@ -173,112 +281,162 @@ export default function TaskRegisterFlow({
       metadata: { type: 'task_register_action', action },
     })
 
-    if (action === 'update') {
-      setDraft((current) => ({ ...current, action }))
-      setPhase('pick-task')
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-pick-${Date.now()}`,
-          sender: 'assistant',
-          tone: 'standard',
-          content: 'Escolha a tarefa que você quer atualizar.',
-        },
-      ])
-      return
-    }
+    try {
+      if (action === 'update') {
+        setDraft((current) => ({ ...current, action }))
+        setSelectedTaskUpdates([])
+        setPhase('pick-task')
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `assistant-pick-${Date.now()}`,
+            sender: 'assistant',
+            tone: 'standard',
+            content: 'Escolha a tarefa que você quer atualizar.',
+          },
+        ])
+        return
+      }
 
-    const nextDraft = {
-      ...EMPTY_DRAFT,
-      action,
-    }
-    setDraft(nextDraft)
-    setStep(0)
-    setInputValue(getTaskFieldValue(nextDraft, currentQuestions[0]?.field ?? 'taskTitle'))
-    setPhase('questions')
+      const nextDraft = { ...EMPTY_DRAFT, action }
+      setDraft(nextDraft)
+      setSelectedTaskUpdates([])
+      setStep(0)
+      setPhase('questions')
 
-    const firstQuestion = getTaskQuestions(action)[0]
-    setMessages((prev) => [...prev, buildNextQuestionMessage(firstQuestion, 0)])
+      const questions = getActiveQuestions(nextDraft, getTaskQuestions(action))
+      setMessages((prev) => [...prev, buildNextQuestionMessage(questions[0], 0)])
+    } finally {
+      stopBusy()
+    }
   }
 
   async function handleSelectTask(taskId: string) {
-    const task = getSelectedTask(tasks, taskId)
+    if (isBusy || saving) return
+    const task = tasks.find((item) => item.id === taskId)
     if (!task) return
+    startBusy('Carregando os dados atuais da tarefa...')
 
-    setDraft((current) => ({
-      ...current,
-      action: 'update',
-      taskId,
-      currentStatus: task.status,
-      newStatus: task.status,
-      taskTitle: task.title,
-    }))
+    try {
+      const nextDraft: TaskRegisterDraft = {
+        ...EMPTY_DRAFT,
+        action: 'update',
+        taskId,
+        title: task.title,
+        category: task.category,
+        status: task.status,
+        priority: task.priority,
+        feature_or_ticket: task.feature_or_ticket ?? '',
+        what_was_done: task.what_was_done ?? '',
+        technical_approach: task.technical_approach ?? '',
+        next_steps: task.next_steps ?? '',
+        blocked_reason: task.blocked_reason ?? '',
+        people_involved: task.people_involved ?? '',
+        tags: task.tags ?? [],
+        checkpoints: [],
+      }
 
-    const userMessage: ChatMessageViewModel = {
-      id: `user-task-${task.id}`,
-      sender: 'user',
-      tone: 'highlight',
-      content: task.title,
+      setDraft(nextDraft)
+      await reloadSelectedTaskUpdates(task.id)
+
+      const userMessage: ChatMessageViewModel = {
+        id: `user-task-${task.id}`,
+        sender: 'user',
+        tone: 'highlight',
+        content: task.title,
+      }
+
+      setMessages((prev) => [...prev, userMessage])
+      await addSessionMessage({
+        sender: 'user',
+        content: task.title,
+        metadata: { type: 'task_selected', task_id: task.id },
+      })
+
+      setStep(0)
+      setPhase('questions')
+      const questions = getActiveQuestions(nextDraft, getTaskQuestions('update'))
+      setMessages((prev) => [...prev, buildNextQuestionMessage(questions[0], 0)])
+    } finally {
+      stopBusy()
     }
-
-    setMessages((prev) => [...prev, userMessage])
-    await addSessionMessage({
-      sender: 'user',
-      content: task.title,
-      metadata: { type: 'task_selected', task_id: task.id },
-    })
-
-    setStep(0)
-    setInputValue('')
-    setPhase('questions')
-    setMessages((prev) => [...prev, buildNextQuestionMessage(getTaskQuestions('update')[0], 0)])
   }
 
-  async function handleSubmitAnswer() {
-    if (!currentQuestion) return
-    const value = inputValue.trim()
-    if (!value) return
+  /** Advances to the next question after any answer (text, enum, skip) */
+  function advanceStep(newDraft: TaskRegisterDraft, userContent: string) {
+    void addSessionMessage({
+      sender: 'user',
+      content: userContent,
+      metadata: { type: 'task_answer', field: currentQuestion?.field },
+    })
 
-    const userMessage: ChatMessageViewModel = {
+    const newMessages: ChatMessageViewModel = {
       id: `user-answer-${Date.now()}`,
       sender: 'user',
       tone: 'highlight',
-      content: currentQuestion.field === 'newStatus' ? selectedTask && draft.action === 'update' && value === selectedTask.status ? `${value} (mantido)` : value : value,
+      content: userContent,
     }
+    setMessages((prev) => [...prev, newMessages])
 
-    setMessages((prev) => [...prev, userMessage])
-    await addSessionMessage({
-      sender: 'user',
-      content: value,
-      metadata: { type: 'task_answer', field: currentQuestion.field },
-    })
-
-    const nextDraft = { ...draft }
-    if (currentQuestion.field === 'taskTitle') nextDraft.taskTitle = value
-    if (currentQuestion.field === 'summary') nextDraft.summary = value
-    if (currentQuestion.field === 'newStatus') nextDraft.newStatus = value as TaskDTO['status']
-
-    setDraft(nextDraft)
+    const newActive = getActiveQuestions(newDraft, allQuestions)
     const nextStep = step + 1
-    const nextQuestions = getTaskQuestions(nextDraft.action)
 
-    if (nextStep < nextQuestions.length) {
+    if (nextStep < newActive.length) {
       setStep(nextStep)
-      setInputValue(getTaskFieldValue(nextDraft, nextQuestions[nextStep].field))
-      setMessages((prev) => [...prev, buildNextQuestionMessage(nextQuestions[nextStep], nextStep)])
+      setMessages((prev) => [...prev, buildNextQuestionMessage(newActive[nextStep], nextStep)])
       return
     }
 
-    setInputValue('')
     setPhase('summary')
+  }
+
+  function handleTextSubmit(value: string) {
+    if (!currentQuestion || !value.trim()) return
+    const field = currentQuestion.field
+    const newDraft = { ...draft, [field]: value.trim() }
+    setDraft(newDraft)
+    advanceStep(newDraft, value.trim())
+  }
+
+  function handleEnumSelect(value: string) {
+    if (!currentQuestion) return
+    setDraft((d) => ({ ...d, [currentQuestion.field]: value }))
+  }
+
+  function handleEnumSubmit() {
+    if (!currentQuestion) return
+    const currentValue = draft[currentQuestion.field as keyof TaskRegisterDraft]
+    if (!currentValue) return
+    const newDraft = { ...draft }
+    const label = currentQuestion.enumOptions?.find((o) => o.value === currentValue)?.label ?? String(currentValue)
+    advanceStep(newDraft, label)
+  }
+
+  function handleTagsSubmit(tags: string[]) {
+    if (!currentQuestion) return
+    const newDraft = { ...draft, tags }
+    setDraft(newDraft)
+    advanceStep(newDraft, tags.length > 0 ? tags.join(', ') : '(sem tags)')
+  }
+
+  function handleChecklistSubmit(items: typeof draft.checkpoints) {
+    if (!currentQuestion) return
+    const newDraft = { ...draft, checkpoints: items }
+    setDraft(newDraft)
+    advanceStep(newDraft, items.length > 0 ? `${items.length} item${items.length > 1 ? 's' : ''}` : '(sem itens)')
+  }
+
+  function handleSkip() {
+    if (!currentQuestion) return
+    advanceStep(draft, '(pulado)')
   }
 
   function handleEditAnswers() {
     const action = draft.action
     if (!action) return
     setStep(0)
-    setInputValue(getTaskFieldValue(draft, getTaskQuestions(action)[0].field))
     setPhase('questions')
+    const questions = getActiveQuestions(draft, getTaskQuestions(action))
     setMessages((prev) => [
       ...prev,
       {
@@ -287,32 +445,63 @@ export default function TaskRegisterFlow({
         tone: 'standard',
         content: 'Perfeito. Vamos revisar suas respostas a partir da primeira pergunta.',
       },
-      buildNextQuestionMessage(getTaskQuestions(action)[0], 0),
+      buildNextQuestionMessage(questions[0], 0),
     ])
   }
 
   async function handleConfirmSave() {
-    if (!projectId || !draft.action) return
+    if (!projectId || !draft.action || isBusy) return
     setSaving(true)
+    startBusy('Salvando o registro da tarefa...')
     setPhase('saving')
     setError(null)
 
     try {
-      let taskTitle = draft.taskTitle
+      let taskTitle = draft.title
+      let persistedTaskId = draft.taskId
+      const previousStatus = selectedTask?.status ?? null
 
       if (draft.action === 'create') {
         const { data } = await taskService.create(projectId, {
-          title: draft.taskTitle,
-          status: draft.newStatus ?? 'todo',
-          what_was_done: draft.summary,
+          title: draft.title,
+          category: draft.category ?? undefined,
+          status: draft.status ?? 'todo',
+          priority: draft.priority ?? undefined,
+          feature_or_ticket: draft.feature_or_ticket || null,
+          what_was_done: draft.what_was_done || null,
+          technical_approach: draft.technical_approach || null,
+          next_steps: draft.next_steps || null,
+          blocked_reason: draft.blocked_reason || null,
+          people_involved: draft.people_involved || null,
+          tags: draft.tags.length > 0 ? draft.tags : undefined,
         })
         taskTitle = data.title
+        persistedTaskId = data.id
+
+        if (draft.checkpoints.length > 0) {
+          await taskService.createCheckpoints(persistedTaskId, draft.checkpoints)
+        }
       } else if (draft.taskId) {
         const { data } = await taskService.update(draft.taskId, {
-          status: draft.newStatus ?? selectedTask?.status,
-          what_was_done: draft.summary,
+          status: draft.status ?? selectedTask?.status,
+          what_was_done: draft.what_was_done || null,
+          technical_approach: draft.technical_approach || null,
+          next_steps: draft.next_steps || null,
+          blocked_reason: draft.blocked_reason || null,
+          tags: draft.tags.length > 0 ? draft.tags : null,
         })
         taskTitle = data.title
+      }
+
+      if (persistedTaskId && draft.action === 'update') {
+        await taskService.createUpdate(
+          persistedTaskId,
+          buildTaskUpdatePayload({
+            draft,
+            previousStatus,
+            isCreate: false,
+          }),
+        )
       }
 
       await addSessionMessage({
@@ -321,25 +510,32 @@ export default function TaskRegisterFlow({
         metadata: {
           type: 'task_saved',
           action: draft.action,
-          task_id: draft.taskId,
+          task_id: persistedTaskId,
           title: taskTitle,
         },
       })
 
       await reloadTasks()
+      await reloadSelectedTaskUpdates(persistedTaskId ?? null)
       const successMessage = buildTaskSuccessMessage(draft.action, taskTitle)
       setMessages((prev) => [...prev, successMessage])
-      setPhase('done')
 
-      window.setTimeout(() => {
-        resetFlow(buildActionSelectionMessage())
-      }, 700)
+      if (draft.action === 'create') {
+        setCreatedTaskId(persistedTaskId)
+        setPhase('attachments')
+      } else {
+        setPhase('done')
+        window.setTimeout(() => {
+          resetFlow(buildActionSelectionMessage())
+        }, 700)
+      }
     } catch {
       setError('Não foi possível salvar o registro da tarefa.')
       setMessages((prev) => [...prev, buildTaskErrorMessage()])
       setPhase('summary')
     } finally {
       setSaving(false)
+      stopBusy()
     }
   }
 
@@ -356,6 +552,23 @@ export default function TaskRegisterFlow({
       </section>
     )
   }
+
+  // Current text/enum/tags values for the active question
+  const currentTextField = (() => {
+    if (!currentQuestion) return ''
+    const v = draft[currentQuestion.field as keyof TaskRegisterDraft]
+    if (Array.isArray(v) || v === null) return ''
+    return (v as string) ?? ''
+  })()
+
+  const currentEnumValue = (() => {
+    if (!currentQuestion || currentQuestion.inputType !== 'enum-single') return null
+    const v = draft[currentQuestion.field as keyof TaskRegisterDraft]
+    return typeof v === 'string' ? v : null
+  })()
+
+  const currentTagsValue = draft.tags
+  const currentChecklistValue = draft.checkpoints
 
   const summary = draft.action === 'create'
     ? buildCreateTaskSummary(draft)
@@ -379,11 +592,34 @@ export default function TaskRegisterFlow({
           )}
 
           {phase === 'choose-action' && !loading && (
-            <TaskActionCard onSelect={(action) => { void handleSelectAction(action) }} disableUpdate={tasks.length === 0} />
+            <TaskActionCard
+              onSelect={(action) => { void handleSelectAction(action) }}
+              disableUpdate={tasks.length === 0}
+              disabled={isBusy || saving}
+            />
           )}
 
           {phase === 'pick-task' && (
-            <TaskPickerCard tasks={tasks} selectedTaskId={draft.taskId} onSelect={(taskId) => { void handleSelectTask(taskId) }} />
+            <TaskPickerCard
+              tasks={tasks}
+              selectedTaskId={draft.taskId}
+              onSelect={(taskId) => { void handleSelectTask(taskId) }}
+              disabled={isBusy || saving}
+            />
+          )}
+
+          {phase === 'attachments' && createdTaskId && (
+            <AttachmentUploadStep
+              taskId={createdTaskId}
+              onComplete={() => {
+                setPhase('done')
+                window.setTimeout(() => { resetFlow(buildActionSelectionMessage()) }, 700)
+              }}
+              onSkip={() => {
+                setPhase('done')
+                window.setTimeout(() => { resetFlow(buildActionSelectionMessage()) }, 700)
+              }}
+            />
           )}
 
           {(phase === 'summary' || phase === 'saving' || phase === 'done') && draft.action && (
@@ -400,15 +636,49 @@ export default function TaskRegisterFlow({
               {error}
             </div>
           )}
+
+          {isBusy && busyMessage && !loading && (
+            <div className="chat-card-enter flex items-start gap-4">
+              <LogoAvatar />
+              <article className="chat-message-glow max-w-3xl rounded-[22px] border border-white/8 bg-surface-container/92 px-5 py-4 sm:px-6">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-5 items-center gap-1.5">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-accent-indigo/90" />
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-accent-indigo/65 [animation-delay:120ms]" />
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-accent-indigo/40 [animation-delay:240ms]" />
+                  </span>
+                  <p className="text-[15px] leading-7 text-white/74">{busyMessage}</p>
+                </div>
+              </article>
+            </div>
+          )}
         </div>
 
         {phase === 'questions' && currentQuestion && (
           <TaskQuestionInput
             question={currentQuestion}
-            value={inputValue}
-            onChange={setInputValue}
-            onSubmit={() => { void handleSubmitAnswer() }}
-            disabled={!inputValue.trim()}
+            textValue={currentTextField}
+            onTextChange={(v) => setDraft((d) => ({ ...d, [currentQuestion.field]: v }))}
+            enumValue={currentEnumValue}
+            onEnumSelect={handleEnumSelect}
+            tagsValue={currentTagsValue}
+            onTagsChange={(tags) => setDraft((d) => ({ ...d, tags }))}
+            checklistValue={currentChecklistValue}
+            onChecklistChange={(items) => setDraft((d) => ({ ...d, checkpoints: items }))}
+            onSubmit={() => {
+              if (currentQuestion.inputType === 'enum-single') handleEnumSubmit()
+              else if (currentQuestion.inputType === 'tags') handleTagsSubmit(currentTagsValue)
+              else if (currentQuestion.inputType === 'checklist') handleChecklistSubmit(currentChecklistValue)
+              else handleTextSubmit(currentTextField)
+            }}
+            onSkip={handleSkip}
+            disabled={
+              currentQuestion.inputType === 'enum-single'
+                ? !currentEnumValue
+                : currentQuestion.inputType === 'tags' || currentQuestion.inputType === 'checklist'
+                ? false
+                : (!currentTextField.trim() && Boolean(currentQuestion.required))
+            }
           />
         )}
       </section>
@@ -416,7 +686,7 @@ export default function TaskRegisterFlow({
       <div
         className={[
           'chat-card-enter-delay hidden xl:flex h-full min-h-0 shrink-0 flex-col overflow-hidden rounded-[5px] border border-white/8 bg-surface-container/86 backdrop-blur-xl',
-          'transition-[width] duration-[220ms] ease-in-out',
+          'transition-[width] duration-220 ease-in-out',
           isPanelOpen ? 'w-[288px]' : 'w-10',
         ].join(' ')}
       >

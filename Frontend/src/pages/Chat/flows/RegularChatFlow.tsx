@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
 import type { RegularChatFlowProps, SidePanelSection } from '@/pages/Chat/types'
 import { QUERY_COPY } from '@/pages/Chat/constants'
-import ChatMessage from '@/pages/Chat/components/ChatMessage'
-import SidePanel from '@/pages/Chat/components/SidePanel'
+import ChatMessage from '@/components/chat/ChatMessage'
+import SidePanel from '@/components/chat/SidePanel'
 
 export default function RegularChatFlow({
   userInitials,
@@ -75,7 +75,7 @@ export default function RegularChatFlow({
       <div
         className={[
           'chat-card-enter-delay hidden xl:flex h-full min-h-0 shrink-0 flex-col overflow-hidden rounded-[5px] border border-white/8 bg-surface-container/86 backdrop-blur-xl',
-          'transition-[width] duration-[220ms] ease-in-out',
+          'transition-[width] duration-220 ease-in-out',
           isPanelOpen ? 'w-[288px]' : 'w-10',
         ].join(' ')}
       >

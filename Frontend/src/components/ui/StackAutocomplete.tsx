@@ -81,11 +81,11 @@ export default function StackAutocomplete({
       renderValue={(selected, getItemProps) =>
         selected.map((option, index) => {
           const stringValue = typeof option === 'string' ? option : String(option)
-          const { key, onDelete, ...tagProps } = getItemProps({ index })
+          const { key, onDelete, className, ...tagProps } = getItemProps({ index })
           return (
             <div
               key={key ?? `${stringValue}-${index}`}
-              className="mr-1 mt-1 inline-flex items-center gap-1 rounded-full"
+              className={[className, 'mr-1 mt-1 inline-flex items-center gap-1 rounded-full'].filter(Boolean).join(' ')}
               {...tagProps}
             >
               <StackBadge value={stringValue} compact />

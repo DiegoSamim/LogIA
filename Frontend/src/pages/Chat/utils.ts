@@ -1,9 +1,14 @@
-import type { ChatMessageViewModel, ProjectDraft, ProjectQuestion, TaskLookup, TaskRegisterDraft, TaskRegisterProgressItem, TaskRegisterQuestion, TaskSummaryViewModel } from '@/pages/Chat/types'
-import { CREATE_TASK_QUESTIONS, TASK_STATUS_OPTIONS, UPDATE_TASK_QUESTIONS } from '@/pages/Chat/constants'
+import type { BuiltTaskUpdatePayload, ChatMessageViewModel, ProjectDraft, ProjectQuestion, TaskLookup, TaskRegisterDraft, TaskRegisterProgressItem, TaskRegisterQuestion, TaskSummaryField, TaskSummaryViewModel } from '@/pages/Chat/types'
+import { CREATE_TASK_QUESTIONS, STATUS_CHIP_OPTIONS, UPDATE_TASK_QUESTIONS } from '@/pages/Chat/constants'
 
 export function getProjectDraftValue(draft: ProjectDraft, field: ProjectQuestion['field']): string {
   if (field === 'stack') return draft.stack.join(', ')
   return draft[field] ?? ''
+}
+
+/** Returns the full question list for the given action, filtering out conditional questions based on draft */
+export function getActiveQuestions(draft: TaskRegisterDraft, allQuestions: TaskRegisterQuestion[]): TaskRegisterQuestion[] {
+  return allQuestions.filter((q) => !q.condition || q.condition(draft))
 }
 
 export function getTaskQuestions(action: TaskRegisterDraft['action']): TaskRegisterQuestion[] {
@@ -11,7 +16,7 @@ export function getTaskQuestions(action: TaskRegisterDraft['action']): TaskRegis
 }
 
 export function getTaskStatusLabel(status: string): string {
-  return TASK_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+  return STATUS_CHIP_OPTIONS.find((option) => option.value === status)?.label ?? status
 }
 
 export function getSelectedTask(tasks: TaskLookup[], taskId: string | null) {
@@ -50,25 +55,93 @@ export function buildNextQuestionMessage(question: TaskRegisterQuestion, step: n
 }
 
 export function buildCreateTaskSummary(draft: TaskRegisterDraft): TaskSummaryViewModel {
+  const updatePayload = buildTaskUpdatePayload({
+    draft,
+    previousStatus: null,
+    isCreate: true,
+  })
+
+  const topFields: TaskSummaryField[] = [
+    { label: 'Ação', value: 'Criar nova tarefa', compact: true, tone: 'strong' },
+    { label: 'Título', value: draft.title, compact: true, tone: 'strong' },
+    { label: 'Status', value: getTaskStatusLabel(draft.status ?? 'todo'), compact: true },
+    { label: 'Update gerado', value: getUpdateTypeLabel(updatePayload.update_type), compact: true },
+  ]
+
+  const detailFields: TaskSummaryField[] = [
+    { label: 'O que foi feito', value: draft.what_was_done, multiline: true },
+    { label: 'Categoria', value: draft.category ? draft.category.replace('_', ' ') : '', compact: true },
+    { label: 'Prioridade', value: draft.priority ?? '', compact: true },
+    { label: 'Ticket ou feature', value: draft.feature_or_ticket, compact: true },
+    { label: 'Abordagem técnica', value: draft.technical_approach, multiline: true },
+    { label: 'Próximos passos', value: draft.next_steps, multiline: true },
+    { label: 'Motivo do bloqueio', value: draft.blocked_reason, multiline: true },
+    { label: 'Pessoas envolvidas', value: draft.people_involved, compact: true },
+    { label: 'Tags', value: draft.tags, kind: 'tags' as const },
+    ...(draft.checkpoints.length > 0
+      ? [{ label: 'Checklist', value: `${draft.checkpoints.length} item${draft.checkpoints.length > 1 ? 's' : ''}`, compact: true }]
+      : []),
+  ].filter((field) =>
+    Array.isArray(field.value) ? field.value.length > 0 : field.value.trim().length > 0,
+  )
+
+  const skippedFields = [
+    !draft.category ? 'Categoria' : null,
+    !draft.priority ? 'Prioridade' : null,
+    !draft.feature_or_ticket.trim() ? 'Ticket ou feature' : null,
+    !draft.technical_approach.trim() ? 'Abordagem técnica' : null,
+    !draft.next_steps.trim() ? 'Próximos passos' : null,
+    !draft.blocked_reason.trim() ? 'Motivo do bloqueio' : null,
+    !draft.people_involved.trim() ? 'Pessoas envolvidas' : null,
+    draft.tags.length === 0 ? 'Tags' : null,
+    draft.checkpoints.length === 0 ? 'Checklist' : null,
+  ].filter(Boolean) as string[]
+
   return {
-    title: 'Título',
-    statusLabel: getTaskStatusLabel(draft.newStatus ?? 'todo'),
-    summaryLabel: 'Resumo',
-    summaryValue: draft.summary,
     actionLabel: 'Criar nova tarefa',
-    taskName: draft.taskTitle,
+    topFields,
+    detailFields,
+    skippedFields,
   }
 }
 
 export function buildUpdateTaskSummary(draft: TaskRegisterDraft, tasks: TaskLookup[]): TaskSummaryViewModel {
   const task = getSelectedTask(tasks, draft.taskId)
+  const updatePayload = buildTaskUpdatePayload({
+    draft,
+    previousStatus: task?.status ?? null,
+    isCreate: false,
+  })
+
+  const topFields: TaskSummaryField[] = [
+    { label: 'Ação', value: 'Atualizar tarefa existente', compact: true, tone: 'strong' },
+    { label: 'Tarefa', value: task?.title ?? draft.title ?? 'Tarefa selecionada', compact: true, tone: 'strong' },
+    { label: 'Status', value: getTaskStatusLabel(draft.status ?? task?.status ?? 'todo'), compact: true },
+    { label: 'Update gerado', value: getUpdateTypeLabel(updatePayload.update_type), compact: true },
+  ]
+
+  const detailFields: TaskSummaryField[] = [
+    { label: 'O que mudou', value: draft.what_was_done, multiline: true },
+    { label: 'Abordagem técnica', value: draft.technical_approach, multiline: true },
+    { label: 'Próximos passos', value: draft.next_steps, multiline: true },
+    { label: 'Motivo do bloqueio', value: draft.blocked_reason, multiline: true },
+    { label: 'Tags', value: draft.tags, kind: 'tags' as const },
+  ].filter((field) =>
+    Array.isArray(field.value) ? field.value.length > 0 : field.value.trim().length > 0,
+  )
+
+  const skippedFields = [
+    !draft.technical_approach.trim() ? 'Abordagem técnica' : null,
+    !draft.next_steps.trim() ? 'Próximos passos' : null,
+    !draft.blocked_reason.trim() ? 'Motivo do bloqueio' : null,
+    draft.tags.length === 0 ? 'Tags' : null,
+  ].filter(Boolean) as string[]
+
   return {
-    title: 'Tarefa',
-    statusLabel: getTaskStatusLabel(draft.newStatus ?? task?.status ?? 'todo'),
-    summaryLabel: 'Resumo do update',
-    summaryValue: draft.summary,
     actionLabel: 'Atualizar tarefa existente',
-    taskName: task?.title ?? 'Tarefa selecionada',
+    topFields,
+    detailFields,
+    skippedFields,
   }
 }
 
@@ -99,32 +172,14 @@ export function getTaskRegisterProgress({
     })
   }
 
-  const questions = getTaskQuestions(action)
-  items.push(
-    ...questions.map((question, index) => {
-      const done =
-        question.field === 'taskTitle'
-          ? Boolean(draft.taskTitle)
-          : question.field === 'summary'
-          ? Boolean(draft.summary)
-          : Boolean(draft.newStatus)
-      return {
-        id: question.field,
-        label:
-          question.field === 'taskTitle'
-            ? 'Título'
-            : question.field === 'summary'
-            ? 'Resumo'
-            : 'Status',
-        done,
-        active: phase === 'questions' && !done && questions.slice(0, index).every((item) => {
-          if (item.field === 'taskTitle') return Boolean(draft.taskTitle)
-          if (item.field === 'summary') return Boolean(draft.summary)
-          return Boolean(draft.newStatus)
-        }),
-      }
-    }),
-  )
+  const requiredFields = action === 'create'
+    ? [{ id: 'title', label: 'Título', done: Boolean(draft.title) }]
+    : [{ id: 'what_was_done', label: 'O que foi feito', done: Boolean(draft.what_was_done) }]
+
+  items.push(...requiredFields.map((f) => ({
+    ...f,
+    active: phase === 'questions' && !f.done,
+  })))
 
   items.push({
     id: 'summary',
@@ -137,9 +192,10 @@ export function getTaskRegisterProgress({
 }
 
 export function getTaskFieldValue(draft: TaskRegisterDraft, field: TaskRegisterQuestion['field']): string {
-  if (field === 'taskTitle') return draft.taskTitle
-  if (field === 'summary') return draft.summary
-  return draft.newStatus ?? ''
+  if (field === 'checkpoints') return ''
+  const v = draft[field as keyof TaskRegisterDraft]
+  if (Array.isArray(v)) return ''
+  return (v as string | null) ?? ''
 }
 
 export function buildTaskSuccessMessage(action: TaskRegisterDraft['action'], taskTitle: string): ChatMessageViewModel {
@@ -165,4 +221,51 @@ export function buildTaskErrorMessage(): ChatMessageViewModel {
 
 export function getActionLabel(action: TaskRegisterDraft['action']): string {
   return action === 'create' ? 'Criar nova tarefa' : 'Atualizar tarefa existente'
+}
+
+export function getUpdateTypeLabel(updateType: string): string {
+  if (updateType === 'created') return 'Criação'
+  if (updateType === 'completion') return 'Conclusão'
+  if (updateType === 'blocker') return 'Bloqueio'
+  if (updateType === 'status_change') return 'Mudança de status'
+  if (updateType === 'edit') return 'Edição'
+  return 'Progresso'
+}
+
+export function buildTaskUpdatePayload({
+  draft,
+  previousStatus,
+  isCreate,
+}: {
+  draft: TaskRegisterDraft
+  previousStatus: string | null
+  isCreate: boolean
+}): BuiltTaskUpdatePayload {
+  const nextStatus = draft.status ?? null
+  const summary = draft.what_was_done.trim() || null
+  const detailsParts = [
+    draft.what_was_done.trim(),
+    draft.technical_approach.trim() ? `Abordagem técnica: ${draft.technical_approach.trim()}` : '',
+    draft.next_steps.trim() ? `Próximos passos: ${draft.next_steps.trim()}` : '',
+    draft.blocked_reason.trim() ? `Motivo do bloqueio: ${draft.blocked_reason.trim()}` : '',
+  ].filter(Boolean)
+
+  let updateType: BuiltTaskUpdatePayload['update_type'] = 'progress'
+  if (isCreate) {
+    updateType = 'created'
+  } else if (nextStatus === 'done' && previousStatus !== 'done') {
+    updateType = 'completion'
+  } else if (nextStatus === 'blocked' && previousStatus !== 'blocked') {
+    updateType = 'blocker'
+  } else if (nextStatus && previousStatus && nextStatus !== previousStatus) {
+    updateType = 'status_change'
+  }
+
+  return {
+    update_type: updateType,
+    summary,
+    details: detailsParts.length > 0 ? detailsParts.join('\n\n') : null,
+    old_status: isCreate ? null : (previousStatus as BuiltTaskUpdatePayload['old_status']),
+    new_status: nextStatus as BuiltTaskUpdatePayload['new_status'],
+  }
 }

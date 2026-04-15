@@ -1,6 +1,45 @@
 import type { TaskSummaryViewModel } from '@/pages/Chat/types'
 import LogoAvatar from './LogoAvatar'
 
+function SummaryField({
+  label,
+  value,
+  compact = false,
+  multiline = false,
+  tone = 'default',
+  kind = 'text',
+}: TaskSummaryViewModel['topFields'][number]) {
+  const toneClass =
+    tone === 'strong' ? 'text-white/90 font-semibold' : tone === 'muted' ? 'text-white/48' : 'text-white/72'
+
+  return (
+    <div
+      className={[
+        'rounded-[16px] border border-white/6 bg-surface-base/58 px-4 py-3',
+        compact ? '' : 'md:col-span-2',
+      ].join(' ')}
+    >
+      <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30 uppercase">{label}</p>
+      {kind === 'tags' && Array.isArray(value) ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {value.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-[999px] border border-accent-indigo/18 bg-accent-indigo/8 px-2.5 py-1 text-[11px] font-medium text-accent-indigo/80"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className={['mt-2 text-sm', multiline ? 'whitespace-pre-line leading-6' : '', toneClass].join(' ')}>
+          {Array.isArray(value) ? value.join(', ') : value}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function TaskSummaryCard({
   summary,
   onConfirm,
@@ -21,29 +60,36 @@ export default function TaskSummaryCard({
         </article>
 
         <div className="chat-message-glow rounded-[22px] border border-accent-indigo/20 bg-[linear-gradient(180deg,rgba(19,22,36,0.96),rgba(13,15,22,0.96))] px-5 py-5 sm:px-6">
-          <div className="space-y-4">
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30 uppercase">Ação</p>
-              <p className="mt-1.5 text-sm font-semibold text-white/90">{summary.actionLabel}</p>
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {summary.topFields.map((field) => (
+                <SummaryField key={field.label} {...field} />
+              ))}
             </div>
-            {summary.taskName && (
-              <div>
-                <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30 uppercase">Tarefa</p>
-                <p className="mt-1.5 text-sm text-white/74">{summary.taskName}</p>
+
+            {summary.detailFields.length > 0 && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {summary.detailFields.map((field) => (
+                  <SummaryField key={field.label} {...field} />
+                ))}
               </div>
             )}
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30 uppercase">{summary.title}</p>
-              <p className="mt-1.5 text-sm font-semibold text-white/90">{summary.taskName ?? 'Nova tarefa'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30 uppercase">Status</p>
-              <p className="mt-1.5 text-sm text-white/74">{summary.statusLabel}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30 uppercase">{summary.summaryLabel}</p>
-              <p className="mt-1.5 text-sm leading-6 text-white/70">{summary.summaryValue}</p>
-            </div>
+
+            {summary.skippedFields.length > 0 && (
+              <div className="rounded-[16px] border border-dashed border-white/10 bg-surface-base/42 px-4 py-4">
+                <p className="text-[10px] font-semibold tracking-[0.18em] text-white/30 uppercase">Campos pulados</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {summary.skippedFields.map((field) => (
+                    <span
+                      key={field}
+                      className="rounded-[999px] border border-white/10 bg-white/4 px-2.5 py-1 text-[11px] text-white/42"
+                    >
+                      {field}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2.5 border-t border-white/6 pt-5">

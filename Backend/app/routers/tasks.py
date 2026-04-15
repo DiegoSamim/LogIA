@@ -1,12 +1,14 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.auth import get_current_user
 from app.db.engine import get_db
 from app.models.user import User
 from app.schemas.task import (
+    TaskAttachmentResponse,
+    TaskCheckpointBatchCreate,
     TaskCheckpointCreate,
     TaskCheckpointPatch,
     TaskCheckpointResponse,
@@ -104,6 +106,17 @@ async def create_checkpoint(
     return TaskCheckpointResponse.from_orm(cp)
 
 
+@router.post("/tasks/{task_id}/checkpoints/batch", response_model=list[TaskCheckpointResponse], status_code=201)
+async def create_checkpoints_batch(
+    task_id: uuid.UUID,
+    data: TaskCheckpointBatchCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    checkpoints = await task_service.create_checkpoints_batch(db, task_id, current_user.id, data)
+    return [TaskCheckpointResponse.from_orm(cp) for cp in checkpoints]
+
+
 @router.patch("/tasks/{task_id}/checkpoints/{checkpoint_id}", response_model=TaskCheckpointResponse)
 async def update_checkpoint(
     task_id: uuid.UUID,
@@ -114,3 +127,14 @@ async def update_checkpoint(
 ):
     cp = await task_service.update_checkpoint(db, task_id, checkpoint_id, current_user.id, data)
     return TaskCheckpointResponse.from_orm(cp)
+
+
+@router.post("/tasks/{task_id}/attachments", response_model=TaskAttachmentResponse, status_code=201)
+async def upload_attachment(
+    task_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    att = await task_service.create_attachment(db, task_id, current_user.id, file)
+    return TaskAttachmentResponse.from_orm(att)

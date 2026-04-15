@@ -6,10 +6,12 @@ export default function TaskPickerCard({
   tasks,
   selectedTaskId,
   onSelect,
+  disabled = false,
 }: {
   tasks: TaskLookup[]
   selectedTaskId: string | null
   onSelect: (taskId: string) => void
+  disabled?: boolean
 }) {
   return (
     <div className="chat-card-enter flex items-start gap-4">
@@ -22,11 +24,13 @@ export default function TaskPickerCard({
               key={task.id}
               type="button"
               onClick={() => onSelect(task.id)}
+              disabled={disabled}
               className={[
                 'rounded-[22px] border p-4 text-left transition-[border-color,transform,background-color] duration-150 hover:-translate-y-0.5',
                 selected
                   ? 'border-accent-indigo/40 bg-accent-indigo/8'
                   : 'border-white/8 bg-surface-container/88 hover:border-white/16',
+                disabled ? 'cursor-not-allowed opacity-55' : '',
               ].join(' ')}
             >
               <div className="flex items-start justify-between gap-4">

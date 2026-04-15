@@ -25,6 +25,9 @@ export type TaskCategory =
   | 'infra'
   | 'research'
 
+/** tasks.priority */
+export type TaskPriority = 'critical' | 'high' | 'medium' | 'low'
+
 /** task_updates.update_type */
 export type UpdateType =
   | 'created'
@@ -140,7 +143,7 @@ export interface TaskDTO {
   technical_approach: string | null   // source: tasks.technical_approach
   category: TaskCategory              // source: tasks.category
   status: TaskStatus                  // source: tasks.status
-  priority: string | null             // source: tasks.priority
+  priority: TaskPriority | null        // source: tasks.priority
   blocked_reason: string | null       // source: tasks.blocked_reason
   next_steps: string | null           // source: tasks.next_steps
   people_involved: string | null      // source: tasks.people_involved
@@ -181,6 +184,26 @@ export interface TaskCheckpointDTO {
   updated_at: string   // source: task_checkpoints.updated_at
 }
 
+/**
+ * DTO de anexo de tarefa (`task_attachments`).
+ * Metadados do arquivo — o binário fica no disco, não no banco.
+ */
+export interface TaskAttachmentDTO {
+  id: string            // source: task_attachments.id
+  task_id: string       // source: task_attachments.task_id
+  uploaded_by: string   // source: task_attachments.uploaded_by
+  file_name: string     // source: task_attachments.file_name
+  file_url: string      // source: task_attachments.file_url (e.g. /files/uuid.pdf)
+  file_type: string | null  // 'pdf' | 'image'
+  mime_type: string | null  // e.g. 'application/pdf', 'image/png'
+  file_size: number | null  // bytes
+  created_at: string    // source: task_attachments.created_at
+}
+
+export interface CreateCheckpointsBatchRequest {
+  items: { description: string; order_index: number }[]
+}
+
 export interface CreateTaskRequest {
   title: string
   feature_or_ticket?: string | null
@@ -188,7 +211,7 @@ export interface CreateTaskRequest {
   technical_approach?: string | null
   category?: TaskCategory
   status?: TaskStatus
-  priority?: string | null
+  priority?: TaskPriority | null
   blocked_reason?: string | null
   next_steps?: string | null
   people_involved?: string | null
@@ -204,13 +227,21 @@ export interface UpdateTaskRequest {
   technical_approach?: string | null
   category?: TaskCategory
   status?: TaskStatus
-  priority?: string | null
+  priority?: TaskPriority | null
   blocked_reason?: string | null
   next_steps?: string | null
   people_involved?: string | null
   tags?: string[] | null
   started_at?: string | null
   completed_at?: string | null
+}
+
+export interface CreateTaskUpdateRequest {
+  update_type: UpdateType
+  summary?: string | null
+  details?: string | null
+  old_status?: TaskStatus | null
+  new_status?: TaskStatus | null
 }
 
 // ── Chat ────────────────────────────────────────────────────────────────────

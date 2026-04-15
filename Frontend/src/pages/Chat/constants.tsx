@@ -1,5 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import StackBadge from '@/components/ui/StackBadge'
-import type { ChatMessageViewModel, ProjectQuestion, SidePanelSection, TaskRegisterQuestion } from '@/pages/Chat/types'
+import type { ChatMessageViewModel, EnumChipOption, ProjectQuestion, SidePanelSection, TaskRegisterQuestion } from '@/pages/Chat/types'
 
 export const REGISTER_COPY: {
   messages: ChatMessageViewModel[]
@@ -190,41 +191,153 @@ export const PROJECT_QUESTIONS: ProjectQuestion[] = [
   },
 ]
 
-export const TASK_STATUS_OPTIONS = [
-  { value: 'todo', label: 'A fazer' },
-  { value: 'in_progress', label: 'Em andamento' },
-  { value: 'done', label: 'Concluída' },
-  { value: 'blocked', label: 'Bloqueada' },
-  { value: 'cancelled', label: 'Cancelada' },
-] as const
+// ── Enum chip options ───────────────────────────────────────────────────────
+
+export const STATUS_CHIP_OPTIONS: EnumChipOption[] = [
+  { value: 'todo',        label: 'A fazer',       colorClass: 'text-slate-300   bg-slate-400/10  border-slate-400/20' },
+  { value: 'in_progress', label: 'Em andamento',  colorClass: 'text-indigo-300  bg-indigo-400/10 border-indigo-400/20' },
+  { value: 'done',        label: 'Concluída',     colorClass: 'text-green-300   bg-green-400/10  border-green-400/20' },
+  { value: 'blocked',     label: 'Bloqueada',     colorClass: 'text-orange-300  bg-orange-400/10 border-orange-400/20' },
+  { value: 'cancelled',   label: 'Cancelada',     colorClass: 'text-red-300     bg-red-400/10    border-red-400/20' },
+]
+
+export const CATEGORY_CHIP_OPTIONS: EnumChipOption[] = [
+  { value: 'feature',   label: 'Feature',   colorClass: 'text-indigo-300  bg-indigo-400/10 border-indigo-400/20' },
+  { value: 'bug_fix',   label: 'Bug Fix',   colorClass: 'text-red-300     bg-red-400/10    border-red-400/20' },
+  { value: 'refactor',  label: 'Refactor',  colorClass: 'text-amber-300   bg-amber-400/10  border-amber-400/20' },
+  { value: 'test',      label: 'Teste',     colorClass: 'text-cyan-300    bg-cyan-400/10   border-cyan-400/20' },
+  { value: 'ui_ux',     label: 'UI/UX',     colorClass: 'text-violet-300  bg-violet-400/10 border-violet-400/20' },
+  { value: 'docs',      label: 'Docs',      colorClass: 'text-slate-300   bg-slate-400/10  border-slate-400/20' },
+  { value: 'infra',     label: 'Infra',     colorClass: 'text-orange-300  bg-orange-400/10 border-orange-400/20' },
+  { value: 'research',  label: 'Pesquisa',  colorClass: 'text-teal-300    bg-teal-400/10   border-teal-400/20' },
+]
+
+export const PRIORITY_CHIP_OPTIONS: EnumChipOption[] = [
+  { value: 'critical', label: 'Crítica', colorClass: 'text-red-300    bg-red-400/10    border-red-400/20' },
+  { value: 'high',     label: 'Alta',    colorClass: 'text-orange-300 bg-orange-400/10 border-orange-400/20' },
+  { value: 'medium',   label: 'Média',   colorClass: 'text-amber-300  bg-amber-400/10  border-amber-400/20' },
+  { value: 'low',      label: 'Baixa',   colorClass: 'text-green-300  bg-green-400/10  border-green-400/20' },
+]
+
+// kept for backwards-compat with utils.ts getTaskStatusLabel
+export const TASK_STATUS_OPTIONS = STATUS_CHIP_OPTIONS
+
+// ── Task questions ──────────────────────────────────────────────────────────
 
 export const CREATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
   {
-    field: 'taskTitle',
+    field: 'title',
     question: 'Qual o título da tarefa?',
     placeholder: 'Ex: Implementar fluxo de registro de tarefas no chat.',
+    required: true,
+    inputType: 'textarea',
   },
   {
-    field: 'newStatus',
+    field: 'category',
+    question: 'Qual a categoria da tarefa?',
+    inputType: 'enum-single',
+    enumOptions: CATEGORY_CHIP_OPTIONS,
+  },
+  {
+    field: 'status',
     question: 'Qual o status atual da tarefa?',
-    placeholder: '',
+    inputType: 'enum-single',
+    enumOptions: STATUS_CHIP_OPTIONS,
   },
   {
-    field: 'summary',
+    field: 'blocked_reason',
+    question: 'Por que a tarefa está bloqueada?',
+    placeholder: 'Descreva o motivo do bloqueio.',
+    inputType: 'textarea',
+    condition: (draft) => draft.status === 'blocked',
+  },
+  {
+    field: 'priority',
+    question: 'Qual a prioridade da tarefa?',
+    inputType: 'enum-single',
+    enumOptions: PRIORITY_CHIP_OPTIONS,
+  },
+  {
+    field: 'feature_or_ticket',
+    question: 'Há referência de ticket ou feature? Cole aqui se tiver.',
+    placeholder: 'Ex: PROJ-123, #42, link do Linear...',
+    inputType: 'text',
+  },
+  {
+    field: 'what_was_done',
     question: 'O que foi feito nesta tarefa?',
     placeholder: 'Descreva de forma simples o que foi realizado.',
+    inputType: 'textarea',
+  },
+  {
+    field: 'technical_approach',
+    question: 'Como foi implementado tecnicamente?',
+    placeholder: 'Ex: Criamos um hook customizado para gerenciar o estado do fluxo de perguntas...',
+    inputType: 'textarea',
+  },
+  {
+    field: 'next_steps',
+    question: 'Quais os próximos passos para essa tarefa?',
+    placeholder: 'Ex: Integrar com o backend, adicionar testes...',
+    inputType: 'textarea',
+  },
+  {
+    field: 'people_involved',
+    question: 'Quem mais está envolvido nessa tarefa?',
+    placeholder: 'Ex: Ana (design), Carlos (backend)...',
+    inputType: 'text',
+  },
+  {
+    field: 'tags',
+    question: 'Adicione tags para facilitar a busca depois.',
+    placeholder: 'Digite uma tag e pressione Enter...',
+    inputType: 'tags',
+  },
+  {
+    field: 'checkpoints',
+    question: 'Quer adicionar itens ao checklist desta tarefa?',
+    placeholder: 'Ex: Implementar endpoint, Escrever testes, Revisar PR...',
+    inputType: 'checklist',
   },
 ]
 
 export const UPDATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
   {
-    field: 'summary',
-    question: 'O que mudou nesta tarefa?',
+    field: 'what_was_done',
+    question: 'O que foi feito / mudou nesta tarefa?',
     placeholder: 'Resuma o avanço ou ajuste feito nesta tarefa.',
+    required: true,
+    inputType: 'textarea',
   },
   {
-    field: 'newStatus',
-    question: 'Qual o novo status da tarefa?',
-    placeholder: '',
+    field: 'status',
+    question: 'O status mudou? Selecione o novo status.',
+    inputType: 'enum-single',
+    enumOptions: STATUS_CHIP_OPTIONS,
+  },
+  {
+    field: 'blocked_reason',
+    question: 'Por que a tarefa está bloqueada?',
+    placeholder: 'Descreva o motivo do bloqueio.',
+    inputType: 'textarea',
+    condition: (draft) => draft.status === 'blocked',
+  },
+  {
+    field: 'technical_approach',
+    question: 'Algum detalhe técnico relevante nessa atualização?',
+    placeholder: 'Ex: Mudamos a estratégia de cache para...',
+    inputType: 'textarea',
+  },
+  {
+    field: 'next_steps',
+    question: 'Quais os próximos passos?',
+    placeholder: 'Ex: Revisar PR, testar no staging...',
+    inputType: 'textarea',
+  },
+  {
+    field: 'tags',
+    question: 'Alguma tag para adicionar ou revisar?',
+    placeholder: 'Digite uma tag e pressione Enter...',
+    inputType: 'tags',
   },
 ]

@@ -134,6 +134,15 @@ class TaskCheckpointCreate(BaseModel):
     order_index: int = 0
 
 
+class TaskCheckpointBatchItem(BaseModel):
+    description: str = Field(min_length=1)
+    order_index: int = 0
+
+
+class TaskCheckpointBatchCreate(BaseModel):
+    items: list[TaskCheckpointBatchItem] = Field(min_length=1)
+
+
 class TaskCheckpointPatch(BaseModel):
     description: str | None = None
     is_done: bool | None = None
@@ -159,4 +168,30 @@ class TaskCheckpointResponse(BaseModel):
             order_index=cp.order_index,
             created_at=cp.created_at.isoformat(),
             updated_at=cp.updated_at.isoformat(),
+        )
+
+
+class TaskAttachmentResponse(BaseModel):
+    id: str
+    task_id: str
+    uploaded_by: str
+    file_name: str
+    file_url: str
+    file_type: str | None
+    mime_type: str | None
+    file_size: int | None
+    created_at: str
+
+    @classmethod
+    def from_orm(cls, att) -> "TaskAttachmentResponse":
+        return cls(
+            id=str(att.id),
+            task_id=str(att.task_id),
+            uploaded_by=str(att.uploaded_by),
+            file_name=att.file_name,
+            file_url=att.file_url,
+            file_type=att.file_type,
+            mime_type=att.mime_type,
+            file_size=att.file_size,
+            created_at=att.created_at.isoformat(),
         )

@@ -40,7 +40,7 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 - `revoked_at (TIMESTAMP)` → revogação  
 - `user_agent (TEXT)` → info do dispositivo  
 - `ip_address (TEXT)` → IP  
-- `created_at (TIMESTAMP)`  
+- `created_at (TIMESTAMP)` → data de emissão  
 
 ---
 
@@ -48,15 +48,15 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Projetos do usuário
 
 ### Atributos
-- `id (UUID)`  
+- `id (UUID)` → identificador do projeto  
 - `user_id (UUID)` → dono do projeto  
-- `name (TEXT)` → nome  
-- `description (TEXT)` → descrição  
-- `repository_url (TEXT)`  
-- `color (TEXT)`  
-- `status (TEXT)`  
-- `created_at (TIMESTAMP)`  
-- `updated_at (TIMESTAMP)`  
+- `name (TEXT)` → nome do projeto  
+- `description (TEXT)` → descrição breve  
+- `repository_url (TEXT)` → URL do repositório  
+- `color (TEXT)` → cor visual do projeto  
+- `status (TEXT)` → estado atual  
+- `created_at (TIMESTAMP)` → data de criação  
+- `updated_at (TIMESTAMP)` → última atualização  
 
 ---
 
@@ -64,23 +64,23 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Contexto expandido do projeto
 
 ### Atributos
-- `id (UUID)`  
+- `id (UUID)` → identificador do perfil  
 - `project_id (UUID)` → relação 1:1 com projeto  
 - `summary (TEXT)` → resumo  
 - `goal (TEXT)` → objetivo  
 - `scope (TEXT)` → escopo  
 - `main_stack (TEXT[])` → tecnologias  
-- `architecture_summary (TEXT)`  
-- `product_context (TEXT)`  
-- `business_rules (TEXT)`  
-- `team_context (TEXT)`  
-- `default_language (TEXT)`  
-- `documentation_url (TEXT)`  
-- `figma_url (TEXT)`  
-- `board_url (TEXT)`  
-- `api_base_url (TEXT)`  
-- `deployment_url (TEXT)`  
-- `created_at (TIMESTAMP)`  
+- `architecture_summary (TEXT)` → visão da arquitetura  
+- `product_context (TEXT)` → contexto do produto  
+- `business_rules (TEXT)` → regras de negócio  
+- `team_context (TEXT)` → contexto do time  
+- `default_language (TEXT)` → idioma padrão  
+- `documentation_url (TEXT)` → link da documentação  
+- `figma_url (TEXT)` → link do design  
+- `board_url (TEXT)` → link do board  
+- `api_base_url (TEXT)` → base da API  
+- `deployment_url (TEXT)` → URL publicada  
+- `created_at (TIMESTAMP)` → data de criação  
 
 ---
 
@@ -88,11 +88,11 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Relacionamento usuário ↔ projeto
 
 ### Atributos
-- `id (UUID)`  
-- `user_id (UUID)`  
-- `project_id (UUID)`  
+- `id (UUID)` → identificador do vínculo  
+- `user_id (UUID)` → usuário relacionado  
+- `project_id (UUID)` → projeto relacionado  
 - `role (TEXT)` → papel no projeto  
-- `created_at (TIMESTAMP)`  
+- `created_at (TIMESTAMP)` → data de entrada  
 
 ---
 
@@ -100,24 +100,24 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Tarefas registradas no sistema
 
 ### Atributos
-- `id (UUID)`  
+- `id (UUID)` → identificador da tarefa  
 - `created_by (UUID)` → usuário criador  
-- `project_id (UUID)`  
-- `title (TEXT)`  
-- `feature_or_ticket (TEXT)`  
-- `what_was_done (TEXT)`  
-- `technical_approach (TEXT)`  
-- `category (TEXT)`  
-- `status (TEXT)`  
-- `priority (TEXT)`  
-- `blocked_reason (TEXT)`  
-- `next_steps (TEXT)`  
-- `people_involved (TEXT)`  
-- `tags (TEXT[])`  
-- `started_at (TIMESTAMP)`  
-- `completed_at (TIMESTAMP)`  
-- `created_at (TIMESTAMP)`  
-- `updated_at (TIMESTAMP)`  
+- `project_id (UUID)` → projeto da tarefa  
+- `title (TEXT)` → título da tarefa  
+- `feature_or_ticket (TEXT)` → referência externa  
+- `what_was_done (TEXT)` → resumo do trabalho  
+- `technical_approach (TEXT)` → abordagem técnica  
+- `category (TEXT)` → tipo da tarefa  
+- `status (TEXT)` → status atual  
+- `priority (TEXT)` → prioridade definida  
+- `blocked_reason (TEXT)` → motivo do bloqueio  
+- `next_steps (TEXT)` → próximos passos  
+- `people_involved (TEXT)` → pessoas envolvidas  
+- `tags (TEXT[])` → marcadores livres  
+- `started_at (TIMESTAMP)` → início da execução  
+- `completed_at (TIMESTAMP)` → conclusão da tarefa  
+- `created_at (TIMESTAMP)` → data de criação  
+- `updated_at (TIMESTAMP)` → última atualização  
 
 ---
 
@@ -125,15 +125,15 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Histórico de evolução das tarefas
 
 ### Atributos
-- `id (UUID)`  
-- `task_id (UUID)`  
-- `created_by (UUID)`  
-- `update_type (TEXT)`  
-- `summary (TEXT)`  
-- `details (TEXT)`  
-- `old_status (TEXT)`  
-- `new_status (TEXT)`  
-- `created_at (TIMESTAMP)`  
+- `id (UUID)` → identificador do update  
+- `task_id (UUID)` → tarefa atualizada  
+- `created_by (UUID)` → autor do update  
+- `update_type (TEXT)` → tipo de atualização  
+- `summary (TEXT)` → resumo curto  
+- `details (TEXT)` → detalhes adicionais  
+- `old_status (TEXT)` → status anterior  
+- `new_status (TEXT)` → novo status  
+- `created_at (TIMESTAMP)` → data do registro  
 
 ---
 
@@ -141,13 +141,13 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Checklist interno da tarefa
 
 ### Atributos
-- `id (UUID)`  
-- `task_id (UUID)`  
-- `description (TEXT)`  
-- `is_done (BOOLEAN)`  
-- `order_index (INT)`  
-- `created_at (TIMESTAMP)`  
-- `updated_at (TIMESTAMP)`  
+- `id (UUID)` → identificador do item  
+- `task_id (UUID)` → tarefa relacionada  
+- `description (TEXT)` → descrição do checkpoint  
+- `is_done (BOOLEAN)` → item concluído  
+- `order_index (INT)` → ordem de exibição  
+- `created_at (TIMESTAMP)` → data de criação  
+- `updated_at (TIMESTAMP)` → última atualização  
 
 ---
 
@@ -155,15 +155,15 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Arquivos e imagens das tarefas
 
 ### Atributos
-- `id (UUID)`  
-- `task_id (UUID)`  
-- `uploaded_by (UUID)`  
-- `file_name (TEXT)`  
-- `file_url (TEXT)`  
-- `file_type (TEXT)`  
-- `mime_type (TEXT)`  
-- `file_size (INT)`  
-- `created_at (TIMESTAMP)`  
+- `id (UUID)` → identificador do arquivo  
+- `task_id (UUID)` → tarefa relacionada  
+- `uploaded_by (UUID)` → usuário que enviou  
+- `file_name (TEXT)` → nome do arquivo  
+- `file_url (TEXT)` → URL de acesso  
+- `file_type (TEXT)` → tipo lógico do arquivo  
+- `mime_type (TEXT)` → tipo MIME  
+- `file_size (INT)` → tamanho em bytes  
+- `created_at (TIMESTAMP)` → data do upload  
 
 ---
 
@@ -171,16 +171,16 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Sessões de chat (registro ou consulta)
 
 ### Atributos
-- `id (UUID)`  
-- `user_id (UUID)`  
-- `project_id (UUID)`  
-- `mode (TEXT)`  
-- `title (TEXT)`  
-- `status (TEXT)`  
-- `started_at (TIMESTAMP)`  
-- `ended_at (TIMESTAMP)`  
-- `created_at (TIMESTAMP)`  
-- `updated_at (TIMESTAMP)`  
+- `id (UUID)` → identificador da sessão  
+- `user_id (UUID)` → usuário da sessão  
+- `project_id (UUID)` → projeto associado  
+- `mode (TEXT)` → modo do chat  
+- `title (TEXT)` → título da sessão  
+- `status (TEXT)` → estado da sessão  
+- `started_at (TIMESTAMP)` → início da sessão  
+- `ended_at (TIMESTAMP)` → fim da sessão  
+- `created_at (TIMESTAMP)` → data de criação  
+- `updated_at (TIMESTAMP)` → última atualização  
 
 ---
 
@@ -188,13 +188,13 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Mensagens dentro das sessões
 
 ### Atributos
-- `id (UUID)`  
-- `session_id (UUID)`  
-- `sender (TEXT)`  
-- `message_type (TEXT)`  
-- `content (TEXT)`  
-- `metadata (JSONB)`  
-- `created_at (TIMESTAMP)`  
+- `id (UUID)` → identificador da mensagem  
+- `session_id (UUID)` → sessão de origem  
+- `sender (TEXT)` → remetente da mensagem  
+- `message_type (TEXT)` → tipo da mensagem  
+- `content (TEXT)` → conteúdo textual  
+- `metadata (JSONB)` → dados auxiliares  
+- `created_at (TIMESTAMP)` → data do envio  
 
 ---
 
@@ -202,16 +202,16 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 **Descrição:** Base vetorial para RAG
 
 ### Atributos
-- `id (UUID)`  
-- `task_id (UUID)`  
-- `task_update_id (UUID)`  
-- `project_id (UUID)`  
-- `source_type (TEXT)`  
+- `id (UUID)` → identificador do chunk  
+- `task_id (UUID)` → tarefa vinculada  
+- `task_update_id (UUID)` → update vinculado  
+- `project_id (UUID)` → projeto vinculado  
+- `source_type (TEXT)` → origem do conteúdo  
 - `content (TEXT)` → texto indexado  
 - `embedding (VECTOR)` → vetor semântico  
 - `metadata (JSONB)` → filtros auxiliares  
-- `created_at (TIMESTAMP)`  
-- `updated_at (TIMESTAMP)`  
+- `created_at (TIMESTAMP)` → data de criação  
+- `updated_at (TIMESTAMP)` → última atualização  
 
 ---
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { ProjectDetailDTO } from '@/data/dtos'
+import type { ProjectDetailDTO, ProjectMemberRole, UserLookupDTO } from '@/data/dtos'
 import {
   projectService,
   type UpdateProfileRequest,
@@ -28,7 +28,7 @@ import {
 export default function Sobre() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const { setCurrentProject } = useAppStore()
+  const { currentUser, setCurrentProject } = useAppStore()
 
   const [project, setProject] = useState<ProjectDetailDTO | null>(null)
   const [form, setForm] = useState<ProjectFormState | null>(null)
@@ -41,6 +41,12 @@ export default function Sobre() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [expandedFields, setExpandedFields] = useState<Record<string, boolean>>({})
   const [expandedCard, setExpandedCard] = useState<ExpandedCardState | null>(null)
+  const [memberEmailQuery, setMemberEmailQuery] = useState('')
+  const [memberLookup, setMemberLookup] = useState<UserLookupDTO | null>(null)
+  const [memberSearchLoading, setMemberSearchLoading] = useState(false)
+  const [memberMutationLoading, setMemberMutationLoading] = useState<string | null>(null)
+  const [memberError, setMemberError] = useState<string | null>(null)
+  const [selectedRole, setSelectedRole] = useState<ProjectMemberRole>('viewer')
 
   useEffect(() => {
     if (!projectId) {
@@ -77,6 +83,11 @@ export default function Sobre() {
     [displayProfile],
   )
   const links = useMemo(() => (displayProfile ? buildProjectLinks(displayProfile) : []), [displayProfile])
+  const canEditProject = Boolean(currentUser?.id && project?.user_id === currentUser.id)
+  const canManageMembers = Boolean(
+    currentUser?.id &&
+      project?.members?.some((member) => member.user_id === currentUser.id && member.role === 'admin'),
+  )
 
   function updateField<K extends keyof ProjectFormState>(field: K, value: ProjectFormState[K]) {
     setForm((current) => (current ? { ...current, [field]: value } : current))
@@ -98,6 +109,13 @@ export default function Sobre() {
     setForm(toFormState(project))
     setEditing(false)
     setError(null)
+  }
+
+  async function refreshProject() {
+    if (!projectId) return
+    const { data } = await projectService.get(projectId)
+    setProject(data)
+    setCurrentProject({ id: data.id, name: data.name })
   }
 
   async function handleSave() {
@@ -163,6 +181,86 @@ export default function Sobre() {
     }
   }
 
+  async function handleSearchMember() {
+    const email = memberEmailQuery.trim()
+    if (!email || !canManageMembers) return
+
+    setMemberSearchLoading(true)
+    setMemberLookup(null)
+    setMemberError(null)
+
+    try {
+      const { data } = await projectService.searchUserByEmail(email)
+      if (!data) {
+        setMemberError('Nenhum usuário cadastrado foi encontrado com esse email.')
+        return
+      }
+      if (project?.members.some((member) => member.user_id === data.id)) {
+        setMemberError('Esse usuário já faz parte do projeto.')
+        return
+      }
+      setMemberLookup(data)
+    } catch {
+      setMemberError('Não foi possível buscar o usuário por email.')
+    } finally {
+      setMemberSearchLoading(false)
+    }
+  }
+
+  async function handleAddMember() {
+    if (!projectId || !memberLookup || !canManageMembers) return
+
+    setMemberMutationLoading('add')
+    setMemberError(null)
+
+    try {
+      await projectService.addMember(projectId, {
+        email: memberLookup.email,
+        role: selectedRole,
+      })
+      await refreshProject()
+      setMemberEmailQuery('')
+      setMemberLookup(null)
+      setSelectedRole('viewer')
+    } catch {
+      setMemberError('Não foi possível adicionar o membro ao projeto.')
+    } finally {
+      setMemberMutationLoading(null)
+    }
+  }
+
+  async function handleUpdateMemberRole(memberId: string, role: ProjectMemberRole) {
+    if (!projectId || !canManageMembers) return
+
+    setMemberMutationLoading(memberId)
+    setMemberError(null)
+
+    try {
+      await projectService.updateMember(projectId, memberId, { role })
+      await refreshProject()
+    } catch {
+      setMemberError('Não foi possível atualizar o papel deste membro.')
+    } finally {
+      setMemberMutationLoading(null)
+    }
+  }
+
+  async function handleRemoveMember(memberId: string) {
+    if (!projectId || !canManageMembers) return
+
+    setMemberMutationLoading(memberId)
+    setMemberError(null)
+
+    try {
+      await projectService.removeMember(projectId, memberId)
+      await refreshProject()
+    } catch {
+      setMemberError('Não foi possível remover este membro do projeto.')
+    } finally {
+      setMemberMutationLoading(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-full bg-surface-base px-6 pb-16 pt-8 sm:px-8">
@@ -218,6 +316,7 @@ export default function Sobre() {
             editing={editing}
             saving={saving}
             canSave={Boolean(form.name.trim())}
+            canEditProject={canEditProject}
             error={error}
             onCancel={handleCancel}
             onSave={handleSave}
@@ -237,6 +336,32 @@ export default function Sobre() {
               onToggleExpandField={handleExpand}
               onOpenCardModal={handleOpenCardModal}
               onStartEditing={() => setEditing(true)}
+              canEditProject={canEditProject}
+              canManageMembers={canManageMembers}
+              memberEmailQuery={memberEmailQuery}
+              selectedRole={selectedRole}
+              memberLookup={memberLookup}
+              memberSearchLoading={memberSearchLoading}
+              memberMutationLoading={memberMutationLoading}
+              memberError={memberError}
+              onMemberEmailChange={(value) => {
+                setMemberEmailQuery(value)
+                setMemberLookup(null)
+                setMemberError(null)
+              }}
+              onRoleChange={setSelectedRole}
+              onSearchMember={() => {
+                void handleSearchMember()
+              }}
+              onAddMember={() => {
+                void handleAddMember()
+              }}
+              onUpdateMemberRole={(memberId, role) => {
+                void handleUpdateMemberRole(memberId, role)
+              }}
+              onRemoveMember={(memberId) => {
+                void handleRemoveMember(memberId)
+              }}
             />
           )}
         </div>

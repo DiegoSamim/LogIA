@@ -1,6 +1,7 @@
-import type { ChecklistItem, TaskRegisterQuestion } from '@/pages/Chat/types'
+import type { ChecklistItem, ProjectMemberLookup, TaskRegisterQuestion } from '@/pages/Chat/types'
 import ChecklistInput from './ChecklistInput'
 import EnumChipSelector from './EnumChipSelector'
+import MemberMultiSelect from './MemberMultiSelect'
 import TagsInput from './TagsInput'
 
 interface Props {
@@ -13,6 +14,9 @@ interface Props {
   onTagsChange: (tags: string[]) => void
   checklistValue: ChecklistItem[]
   onChecklistChange: (items: ChecklistItem[]) => void
+  memberValue: string[]
+  memberOptions: ProjectMemberLookup[]
+  onMemberToggle: (userId: string) => void
   onSubmit: () => void
   onSkip: () => void
   disabled?: boolean
@@ -28,6 +32,9 @@ export default function TaskQuestionInput({
   onTagsChange,
   checklistValue,
   onChecklistChange,
+  memberValue,
+  memberOptions,
+  onMemberToggle,
   onSubmit,
   onSkip,
   disabled,
@@ -36,6 +43,7 @@ export default function TaskQuestionInput({
   const isEnum = question.inputType === 'enum-single'
   const isTags = question.inputType === 'tags'
   const isChecklist = question.inputType === 'checklist'
+  const isMemberMulti = question.inputType === 'member-multi'
   const isOptional = !question.required
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -78,6 +86,14 @@ export default function TaskQuestionInput({
                 value={checklistValue}
                 onChange={onChecklistChange}
                 placeholder={question.placeholder}
+              />
+            )}
+
+            {isMemberMulti && (
+              <MemberMultiSelect
+                members={memberOptions}
+                selectedIds={memberValue}
+                onToggle={onMemberToggle}
               />
             )}
 

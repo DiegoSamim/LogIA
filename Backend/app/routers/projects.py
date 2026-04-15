@@ -9,6 +9,9 @@ from app.models.user import User
 from app.schemas.project import (
     ProjectCreate,
     ProjectDetailResponse,
+    ProjectMemberCreate,
+    ProjectMemberSimpleResponse,
+    ProjectMemberUpdate,
     ProjectProfileUpdate,
     ProjectResponse,
     ProjectUpdate,
@@ -87,3 +90,58 @@ async def update_project_profile(
         db, uuid.UUID(project_id), current_user.id, data
     )
     return ProjectDetailResponse.from_orm(project)
+
+
+@router.get("/{project_id}/members", response_model=list[ProjectMemberSimpleResponse])
+async def list_project_members(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    project = await project_service.get_detail(db, uuid.UUID(project_id), current_user.id)
+    return [ProjectMemberSimpleResponse.from_orm(member) for member in project.members]
+
+
+@router.post("/{project_id}/members", response_model=ProjectMemberSimpleResponse, status_code=201)
+async def add_project_member(
+    project_id: str,
+    data: ProjectMemberCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    member = await project_service.add_member(db, uuid.UUID(project_id), current_user.id, data)
+    return ProjectMemberSimpleResponse.from_orm(member)
+
+
+@router.patch("/{project_id}/members/{member_id}", response_model=ProjectMemberSimpleResponse)
+async def update_project_member(
+    project_id: str,
+    member_id: str,
+    data: ProjectMemberUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    member = await project_service.update_member(
+        db,
+        uuid.UUID(project_id),
+        uuid.UUID(member_id),
+        current_user.id,
+        data,
+    )
+    return ProjectMemberSimpleResponse.from_orm(member)
+
+
+@router.delete("/{project_id}/members/{member_id}", status_code=204)
+async def remove_project_member(
+    project_id: str,
+    member_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await project_service.remove_member(
+        db,
+        uuid.UUID(project_id),
+        uuid.UUID(member_id),
+        current_user.id,
+    )
+    return Response(status_code=204)

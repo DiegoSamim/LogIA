@@ -7,12 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import ChatMessage, ChatSession
 from app.models.project import Project
+from app.models.task import ProjectMember
 from app.schemas.chat import ChatMessageCreate, ChatSessionCreate, ChatSessionUpdate
 
 
 async def _verify_project_ownership(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
     result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.user_id == user_id)
+        select(Project).where(
+            Project.id == project_id,
+            (Project.user_id == user_id) | Project.members.any(ProjectMember.user_id == user_id),
+        )
     )
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projeto não encontrado.")

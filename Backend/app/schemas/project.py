@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+from app.schemas.user import UserResponse
+
+ProjectMemberRole = Literal["admin", "editor", "viewer"]
 
 
 class ProjectProfileCreate(BaseModel):
@@ -85,6 +91,7 @@ class ProjectProfileResponse(BaseModel):
 
 class ProjectResponse(BaseModel):
     id: str
+    user_id: str
     name: str
     description: str | None
     status: str
@@ -108,6 +115,7 @@ class ProjectResponse(BaseModel):
         profile = project.profile
         return cls(
             id=str(project.id),
+            user_id=str(project.user_id),
             name=project.name,
             description=project.description,
             status=project.status,
@@ -125,8 +133,9 @@ class ProjectMemberSimpleResponse(BaseModel):
     id: str
     user_id: str
     project_id: str
-    role: str
+    role: ProjectMemberRole
     created_at: str
+    user: UserResponse
 
     @classmethod
     def from_orm(cls, member) -> "ProjectMemberSimpleResponse":
@@ -136,6 +145,32 @@ class ProjectMemberSimpleResponse(BaseModel):
             project_id=str(member.project_id),
             role=member.role,
             created_at=member.created_at.isoformat(),
+            user=UserResponse.from_orm(member.user),
+        )
+
+
+class ProjectMemberCreate(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    role: ProjectMemberRole = "viewer"
+
+
+class ProjectMemberUpdate(BaseModel):
+    role: ProjectMemberRole
+
+
+class UserLookupResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    avatar_url: str | None
+
+    @classmethod
+    def from_orm(cls, user) -> "UserLookupResponse":
+        return cls(
+            id=str(user.id),
+            name=user.name,
+            email=user.email,
+            avatar_url=user.avatar_url,
         )
 
 

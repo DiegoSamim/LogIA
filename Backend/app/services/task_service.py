@@ -2,13 +2,14 @@ import uuid
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.models.project import Project
-from app.models.task import Task, TaskAttachment, TaskCheckpoint, TaskUpdate
+from app.models.task import ProjectMember, Task, TaskAttachment, TaskCheckpoint, TaskUpdate
+from app.services import project_service
 from app.schemas.task import TaskCheckpointBatchCreate, TaskCheckpointCreate, TaskCheckpointPatch, TaskCreate, TaskPatch, TaskUpdateCreate
 
 settings = get_settings()
@@ -66,7 +67,13 @@ async def _verify_task_ownership(db: AsyncSession, task_id: uuid.UUID, user_id: 
     result = await db.execute(
         select(Task)
         .join(Project, Task.project_id == Project.id)
-        .where(Task.id == task_id, Project.user_id == user_id)
+        .where(
+            Task.id == task_id,
+            or_(
+                Project.user_id == user_id,
+                Project.members.any(ProjectMember.user_id == user_id),
+            ),
+        )
         .options(
             selectinload(Task.checkpoints),
             selectinload(Task.updates),
@@ -79,11 +86,7 @@ async def _verify_task_ownership(db: AsyncSession, task_id: uuid.UUID, user_id: 
 
 
 async def _verify_project_ownership(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
-    result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.user_id == user_id)
-    )
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projeto não encontrado.")
+    await project_service.verify_project_access(db, project_id, user_id)
 
 
 async def create(

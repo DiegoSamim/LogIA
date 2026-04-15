@@ -1,4 +1,4 @@
-import type { ProjectDetailDTO } from '@/data/dtos'
+import type { ProjectDetailDTO, ProjectMemberRole } from '@/data/dtos'
 import type {
   ArchitectureCardModel,
   DisplayProfile,
@@ -72,6 +72,12 @@ export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+export function formatMemberRole(role: ProjectMemberRole): string {
+  if (role === 'admin') return 'Administrador'
+  if (role === 'editor') return 'Editor'
+  return 'Visualizador'
 }
 
 export function buildDisplayProfile(project: ProjectDetailDTO): DisplayProfile {

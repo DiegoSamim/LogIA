@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 import app.models  # noqa: F401 — registers all mappers before routers load
-from app.routers import auth, projects, tasks, chat
+from app.routers import auth, chat, projects, tasks, users
 
 settings = get_settings()
 
@@ -34,6 +34,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["projects"])
 app.include_router(tasks.router, prefix="/api/v1", tags=["tasks"])
 app.include_router(chat.router, prefix="/api/v1", tags=["chat"])

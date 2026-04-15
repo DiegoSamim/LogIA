@@ -10,6 +10,7 @@ export default function AboutHero({
   editing,
   saving,
   canSave,
+  canEditProject,
   error,
   onCancel,
   onSave,
@@ -23,6 +24,7 @@ export default function AboutHero({
   editing: boolean
   saving: boolean
   canSave: boolean
+  canEditProject: boolean
   error: string | null
   onCancel: () => void
   onSave: () => void
@@ -112,7 +114,7 @@ export default function AboutHero({
                   {saving ? 'Salvando...' : 'Salvar'}
                 </button>
               </>
-            ) : (
+            ) : canEditProject ? (
               <>
                 <button
                   type="button"
@@ -129,6 +131,10 @@ export default function AboutHero({
                   Editar
                 </button>
               </>
+            ) : (
+              <div className="w-full rounded-[18px] border border-white/7 bg-surface-base/70 px-4 py-3 text-xs text-white/42">
+                Apenas o criador do projeto pode editar os dados gerais. Admins adicionais podem gerenciar membros abaixo.
+              </div>
             )}
           </div>
         </div>

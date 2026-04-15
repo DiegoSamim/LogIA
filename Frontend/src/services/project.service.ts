@@ -1,5 +1,12 @@
 import api from './api'
-import type { ProjectDTO, ProjectDetailDTO } from '@/data/dtos'
+import type {
+  AddProjectMemberRequest,
+  ProjectDTO,
+  ProjectDetailDTO,
+  ProjectMemberDTO,
+  UpdateProjectMemberRequest,
+  UserLookupDTO,
+} from '@/data/dtos'
 
 export interface CreateProjectRequest {
   name: string
@@ -58,5 +65,14 @@ export const projectService = {
     api.put<ProjectDetailDTO>(`/projects/${id}`, data),
   updateProfile: (id: string, data: UpdateProfileRequest) =>
     api.put<ProjectDetailDTO>(`/projects/${id}/profile`, data),
+  listMembers: (id: string) => api.get<ProjectMemberDTO[]>(`/projects/${id}/members`),
+  addMember: (id: string, data: AddProjectMemberRequest) =>
+    api.post<ProjectMemberDTO>(`/projects/${id}/members`, data),
+  updateMember: (projectId: string, memberId: string, data: UpdateProjectMemberRequest) =>
+    api.patch<ProjectMemberDTO>(`/projects/${projectId}/members/${memberId}`, data),
+  removeMember: (projectId: string, memberId: string) =>
+    api.delete(`/projects/${projectId}/members/${memberId}`),
+  searchUserByEmail: (email: string) =>
+    api.get<UserLookupDTO | null>('/users/search', { params: { email } }),
   remove: (id: string) => api.delete(`/projects/${id}`),
 }

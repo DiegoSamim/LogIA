@@ -1,4 +1,4 @@
-import type { TaskCategory, TaskDTO, TaskPriority, TaskStatus, TaskUpdateDTO, UpdateType } from '@/data/dtos'
+import type { ProjectMemberDTO, TaskCategory, TaskDTO, TaskPriority, TaskStatus, TaskUpdateDTO, UpdateType } from '@/data/dtos'
 
 export interface ChatMessageViewModel {
   id: string
@@ -85,7 +85,7 @@ export interface TaskRegisterQuestion {
   question: string
   placeholder?: string
   required?: boolean
-  inputType: 'text' | 'textarea' | 'enum-single' | 'tags' | 'checklist'
+  inputType: 'text' | 'textarea' | 'enum-single' | 'tags' | 'checklist' | 'member-multi'
   enumOptions?: EnumChipOption[]
   /** If present, only show this question when condition returns true */
   condition?: (draft: TaskRegisterDraft) => boolean
@@ -104,6 +104,7 @@ export interface TaskRegisterDraft {
   next_steps: string
   blocked_reason: string
   people_involved: string
+  people_involved_member_ids: string[]
   tags: string[]
   checkpoints: ChecklistItem[]
 }
@@ -152,6 +153,7 @@ export interface RegularChatFlowProps {
 }
 
 export type TaskLookup = Pick<TaskDTO, 'id' | 'title' | 'status'>
+export type ProjectMemberLookup = Pick<ProjectMemberDTO, 'id' | 'user_id' | 'role' | 'user'>
 
 export type TaskUpdatePreview = Pick<TaskUpdateDTO, 'id' | 'summary' | 'new_status' | 'old_status' | 'created_at' | 'update_type'>
 

@@ -28,6 +28,9 @@ export type TaskCategory =
 /** tasks.priority */
 export type TaskPriority = 'critical' | 'high' | 'medium' | 'low'
 
+/** project_members.role */
+export type ProjectMemberRole = 'admin' | 'editor' | 'viewer'
+
 /** task_updates.update_type */
 export type UpdateType =
   | 'created'
@@ -70,6 +73,7 @@ export interface UserDTO {
  */
 export interface ProjectDTO {
   id: string                    // source: projects.id
+  user_id: string               // source: projects.user_id
   name: string                  // source: projects.name
   description: string           // source: projects.description
   status: string                // source: projects.status
@@ -114,9 +118,25 @@ export interface ProjectMemberDTO {
   id: string          // source: project_members.id
   user_id: string     // source: project_members.user_id
   project_id: string  // source: project_members.project_id
-  role: string        // source: project_members.role
+  role: ProjectMemberRole  // source: project_members.role
   created_at: string  // source: project_members.created_at
   user: UserDTO       // joined: users (via user_id)
+}
+
+export interface UserLookupDTO {
+  id: string
+  name: string
+  email: string
+  avatar_url: string | null
+}
+
+export interface AddProjectMemberRequest {
+  email: string
+  role: ProjectMemberRole
+}
+
+export interface UpdateProjectMemberRequest {
+  role: ProjectMemberRole
 }
 
 /**

@@ -284,8 +284,7 @@ export const CREATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
   {
     field: 'people_involved',
     question: 'Quem mais está envolvido nessa tarefa?',
-    placeholder: 'Ex: Ana (design), Carlos (backend)...',
-    inputType: 'text',
+    inputType: 'member-multi',
   },
   {
     field: 'tags',

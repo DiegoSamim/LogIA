@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { TaskStatus } from '@/data/dtos'
+import type { ProjectMemberDTO, TaskStatus } from '@/data/dtos'
 import type { ChatSessionDTO, TaskDTO, TaskUpdateDTO } from '@/data/dtos'
 import { chatService } from '@/services/chat.service'
+import { projectService } from '@/services/project.service'
 import { taskService } from '@/services/task.service'
 import type { ChatMessageViewModel, SidePanelSection, TaskRegisterDraft, TaskRegisterFlowProps } from '@/pages/Chat/types'
 import {
@@ -42,8 +43,28 @@ const EMPTY_DRAFT: TaskRegisterDraft = {
   next_steps: '',
   blocked_reason: '',
   people_involved: '',
+  people_involved_member_ids: [],
   tags: [],
   checkpoints: [],
+}
+
+function formatPeopleInvolved(members: ProjectMemberDTO[], selectedIds: string[]) {
+  return members
+    .filter((member) => selectedIds.includes(member.user_id))
+    .map((member) => `${member.user.name} <${member.user.email}>`)
+    .join(', ')
+}
+
+function parsePeopleInvolvedToIds(members: ProjectMemberDTO[], rawValue: string | null) {
+  const normalized = (rawValue ?? '').toLowerCase()
+  if (!normalized.trim()) return []
+  return members
+    .filter((member) => {
+      const email = member.user.email.toLowerCase()
+      const name = member.user.name.toLowerCase()
+      return normalized.includes(email) || normalized.includes(name)
+    })
+    .map((member) => member.user_id)
 }
 
 function formatRecentTaskDate(value: string) {
@@ -74,6 +95,7 @@ export default function TaskRegisterFlow({
 }: TaskRegisterFlowProps) {
   const [session, setSession] = useState<ChatSessionDTO | null>(null)
   const [tasks, setTasks] = useState<TaskDTO[]>([])
+  const [projectMembers, setProjectMembers] = useState<ProjectMemberDTO[]>([])
   const [selectedTaskUpdates, setSelectedTaskUpdates] = useState<TaskUpdateDTO[]>([])
   const [loading, setLoading] = useState(true)
   const [phase, setPhase] = useState<'loading' | 'choose-action' | 'pick-task' | 'questions' | 'summary' | 'saving' | 'attachments' | 'done' | 'error'>('loading')
@@ -105,9 +127,10 @@ export default function TaskRegisterFlow({
       setError(null)
 
       try {
-        const [sessionsResponse, tasksResponse] = await Promise.all([
+        const [sessionsResponse, tasksResponse, membersResponse] = await Promise.all([
           chatService.listByProject(projectId),
           taskService.listByProject(projectId),
+          projectService.listMembers(projectId),
         ])
 
         if (!active) return
@@ -124,6 +147,7 @@ export default function TaskRegisterFlow({
 
         setSession(sessionResponse.data)
         setTasks(tasksResponse.data)
+        setProjectMembers(membersResponse.data)
         setMessages([
           ...buildInitialTaskRegisterMessages(projectName),
           buildActionSelectionMessage(),
@@ -318,23 +342,24 @@ export default function TaskRegisterFlow({
     startBusy('Carregando os dados atuais da tarefa...')
 
     try {
-      const nextDraft: TaskRegisterDraft = {
-        ...EMPTY_DRAFT,
-        action: 'update',
-        taskId,
-        title: task.title,
+    const nextDraft: TaskRegisterDraft = {
+      ...EMPTY_DRAFT,
+      action: 'update',
+      taskId,
+      title: task.title,
         category: task.category,
         status: task.status,
         priority: task.priority,
         feature_or_ticket: task.feature_or_ticket ?? '',
         what_was_done: task.what_was_done ?? '',
-        technical_approach: task.technical_approach ?? '',
-        next_steps: task.next_steps ?? '',
-        blocked_reason: task.blocked_reason ?? '',
-        people_involved: task.people_involved ?? '',
-        tags: task.tags ?? [],
-        checkpoints: [],
-      }
+      technical_approach: task.technical_approach ?? '',
+      next_steps: task.next_steps ?? '',
+      blocked_reason: task.blocked_reason ?? '',
+      people_involved: task.people_involved ?? '',
+      people_involved_member_ids: parsePeopleInvolvedToIds(projectMembers, task.people_involved),
+      tags: task.tags ?? [],
+      checkpoints: [],
+    }
 
       setDraft(nextDraft)
       await reloadSelectedTaskUpdates(task.id)
@@ -419,6 +444,26 @@ export default function TaskRegisterFlow({
     advanceStep(newDraft, tags.length > 0 ? tags.join(', ') : '(sem tags)')
   }
 
+  function handlePeopleInvolvedSubmit(memberIds: string[]) {
+    if (!currentQuestion) return
+    const peopleInvolved = formatPeopleInvolved(projectMembers, memberIds)
+    const newDraft = {
+      ...draft,
+      people_involved_member_ids: memberIds,
+      people_involved: peopleInvolved,
+    }
+    setDraft(newDraft)
+    advanceStep(
+      newDraft,
+      memberIds.length > 0
+        ? projectMembers
+            .filter((member) => memberIds.includes(member.user_id))
+            .map((member) => member.user.name)
+            .join(', ')
+        : '(sem membros)',
+    )
+  }
+
   function handleChecklistSubmit(items: typeof draft.checkpoints) {
     if (!currentQuestion) return
     const newDraft = { ...draft, checkpoints: items }
@@ -478,6 +523,15 @@ export default function TaskRegisterFlow({
         taskTitle = data.title
         persistedTaskId = data.id
 
+        await taskService.createUpdate(
+          persistedTaskId,
+          buildTaskUpdatePayload({
+            draft,
+            previousStatus: null,
+            isCreate: true,
+          }),
+        )
+
         if (draft.checkpoints.length > 0) {
           await taskService.createCheckpoints(persistedTaskId, draft.checkpoints)
         }
@@ -488,6 +542,7 @@ export default function TaskRegisterFlow({
           technical_approach: draft.technical_approach || null,
           next_steps: draft.next_steps || null,
           blocked_reason: draft.blocked_reason || null,
+          people_involved: draft.people_involved || null,
           tags: draft.tags.length > 0 ? draft.tags : null,
         })
         taskTitle = data.title
@@ -569,6 +624,7 @@ export default function TaskRegisterFlow({
 
   const currentTagsValue = draft.tags
   const currentChecklistValue = draft.checkpoints
+  const currentMemberValue = draft.people_involved_member_ids
 
   const summary = draft.action === 'create'
     ? buildCreateTaskSummary(draft)
@@ -665,10 +721,21 @@ export default function TaskRegisterFlow({
             onTagsChange={(tags) => setDraft((d) => ({ ...d, tags }))}
             checklistValue={currentChecklistValue}
             onChecklistChange={(items) => setDraft((d) => ({ ...d, checkpoints: items }))}
+            memberValue={currentMemberValue}
+            memberOptions={projectMembers}
+            onMemberToggle={(userId) =>
+              setDraft((d) => ({
+                ...d,
+                people_involved_member_ids: d.people_involved_member_ids.includes(userId)
+                  ? d.people_involved_member_ids.filter((id) => id !== userId)
+                  : [...d.people_involved_member_ids, userId],
+              }))
+            }
             onSubmit={() => {
               if (currentQuestion.inputType === 'enum-single') handleEnumSubmit()
               else if (currentQuestion.inputType === 'tags') handleTagsSubmit(currentTagsValue)
               else if (currentQuestion.inputType === 'checklist') handleChecklistSubmit(currentChecklistValue)
+              else if (currentQuestion.inputType === 'member-multi') handlePeopleInvolvedSubmit(currentMemberValue)
               else handleTextSubmit(currentTextField)
             }}
             onSkip={handleSkip}
@@ -676,6 +743,8 @@ export default function TaskRegisterFlow({
               currentQuestion.inputType === 'enum-single'
                 ? !currentEnumValue
                 : currentQuestion.inputType === 'tags' || currentQuestion.inputType === 'checklist'
+                ? false
+                : currentQuestion.inputType === 'member-multi'
                 ? false
                 : (!currentTextField.trim() && Boolean(currentQuestion.required))
             }

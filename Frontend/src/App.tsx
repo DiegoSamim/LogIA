@@ -11,6 +11,7 @@ import Sobre from '@/pages/Sobre'
 import Chat from '@/pages/Chat/Chat'
 import Tasks from '@/pages/Tasks'
 import TaskDetail from '@/pages/TaskDetail'
+import Dashboard from '@/pages/Dashboard/Dashboard'
 
 export default function App() {
   useAuthInit()
@@ -31,7 +32,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/projects" element={<Projects />} />
           <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<div />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/tasks/:taskId" element={<TaskDetail />} />

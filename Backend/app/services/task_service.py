@@ -34,7 +34,7 @@ def _compose_task_update_details(
 ) -> str | None:
     parts: list[str] = []
     if what_was_done:
-        parts.append(f"Resumo: {what_was_done}")
+        parts.append(f"Resumo da tarefa: {what_was_done}")
     if technical_approach:
         parts.append(f"Abordagem técnica: {technical_approach}")
     if next_steps:
@@ -45,7 +45,7 @@ def _compose_task_update_details(
 
 
 def _build_initial_update(task: Task, data: TaskCreate, user_id: uuid.UUID) -> TaskUpdate:
-    summary = data.what_was_done or f'Tarefa "{task.title}" criada.'
+    summary = f'Tarefa "{task.title}" criada.'
     details = _compose_task_update_details(
         what_was_done=data.what_was_done,
         technical_approach=data.technical_approach,
@@ -246,6 +246,51 @@ async def create_checkpoints_batch(
     for cp in checkpoints:
         await db.refresh(cp)
     return checkpoints
+
+
+async def list_checkpoints(
+    db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID
+) -> list[TaskCheckpoint]:
+    await _verify_task_ownership(db, task_id, user_id)
+    result = await db.execute(
+        select(TaskCheckpoint)
+        .where(TaskCheckpoint.task_id == task_id)
+        .order_by(TaskCheckpoint.order_index.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def list_attachments(
+    db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID
+) -> list[TaskAttachment]:
+    await _verify_task_ownership(db, task_id, user_id)
+    result = await db.execute(
+        select(TaskAttachment)
+        .where(TaskAttachment.task_id == task_id)
+        .order_by(TaskAttachment.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def delete_attachment(
+    db: AsyncSession, task_id: uuid.UUID, attachment_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    await _verify_task_ownership(db, task_id, user_id)
+    result = await db.execute(
+        select(TaskAttachment).where(
+            TaskAttachment.id == attachment_id, TaskAttachment.task_id == task_id
+        )
+    )
+    att = result.scalar_one_or_none()
+    if not att:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anexo não encontrado.")
+
+    file_path = Path(settings.UPLOAD_DIR) / Path(att.file_url).name
+    if file_path.exists():
+        file_path.unlink()
+
+    await db.delete(att)
+    await db.commit()
 
 
 async def create_attachment(

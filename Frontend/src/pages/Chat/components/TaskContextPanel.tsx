@@ -77,10 +77,24 @@ export default function TaskContextPanel({
         </div>
       )}
 
-      {draft.what_was_done && (
+      {draft.task_summary && draft.action === 'create' && (
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Resumo</p>
-          <p className="mt-1 text-xs leading-5 text-white/60">{draft.what_was_done}</p>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Resumo da tarefa</p>
+          <p className="mt-1 text-xs leading-5 text-white/60">{draft.task_summary}</p>
+        </div>
+      )}
+
+      {draft.update_summary && draft.action === 'update' && (
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">O que foi alterado</p>
+          <p className="mt-1 text-xs leading-5 text-white/60">{draft.update_summary}</p>
+        </div>
+      )}
+
+      {draft.update_task_summary === 'yes' && draft.task_summary && draft.action === 'update' && (
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Resumo atualizado</p>
+          <p className="mt-1 text-xs leading-5 text-white/60">{draft.task_summary}</p>
         </div>
       )}
 
@@ -97,7 +111,7 @@ export default function TaskContextPanel({
         </div>
       )}
 
-      {!draft.action && !draft.title && !draft.what_was_done && (
+      {!draft.action && !draft.title && !draft.task_summary && !draft.update_summary && (
         <p className="text-xs text-white/28 italic">As respostas aparecerão aqui conforme você preenche.</p>
       )}
 

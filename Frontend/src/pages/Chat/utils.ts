@@ -69,7 +69,7 @@ export function buildCreateTaskSummary(draft: TaskRegisterDraft): TaskSummaryVie
   ]
 
   const detailFields: TaskSummaryField[] = [
-    { label: 'O que foi feito', value: draft.what_was_done, multiline: true },
+    { label: 'Resumo da tarefa', value: draft.task_summary, multiline: true },
     { label: 'Categoria', value: draft.category ? draft.category.replace('_', ' ') : '', compact: true },
     { label: 'Prioridade', value: draft.priority ?? '', compact: true },
     { label: 'Ticket ou feature', value: draft.feature_or_ticket, compact: true },
@@ -121,7 +121,10 @@ export function buildUpdateTaskSummary(draft: TaskRegisterDraft, tasks: TaskLook
   ]
 
   const detailFields: TaskSummaryField[] = [
-    { label: 'O que mudou', value: draft.what_was_done, multiline: true },
+    { label: 'O que foi alterado', value: draft.update_summary, multiline: true },
+    ...(draft.update_task_summary === 'yes'
+      ? [{ label: 'Resumo da tarefa', value: draft.task_summary, multiline: true }]
+      : []),
     { label: 'Abordagem técnica', value: draft.technical_approach, multiline: true },
     { label: 'Próximos passos', value: draft.next_steps, multiline: true },
     { label: 'Motivo do bloqueio', value: draft.blocked_reason, multiline: true },
@@ -131,6 +134,7 @@ export function buildUpdateTaskSummary(draft: TaskRegisterDraft, tasks: TaskLook
   )
 
   const skippedFields = [
+    draft.update_task_summary !== 'yes' ? 'Resumo da tarefa' : null,
     !draft.technical_approach.trim() ? 'Abordagem técnica' : null,
     !draft.next_steps.trim() ? 'Próximos passos' : null,
     !draft.blocked_reason.trim() ? 'Motivo do bloqueio' : null,
@@ -174,7 +178,7 @@ export function getTaskRegisterProgress({
 
   const requiredFields = action === 'create'
     ? [{ id: 'title', label: 'Título', done: Boolean(draft.title) }]
-    : [{ id: 'what_was_done', label: 'O que foi feito', done: Boolean(draft.what_was_done) }]
+    : [{ id: 'update_summary', label: 'O que foi alterado', done: Boolean(draft.update_summary) }]
 
   items.push(...requiredFields.map((f) => ({
     ...f,
@@ -242,9 +246,10 @@ export function buildTaskUpdatePayload({
   isCreate: boolean
 }): BuiltTaskUpdatePayload {
   const nextStatus = draft.status ?? null
-  const summary = draft.what_was_done.trim() || null
+  const summary = isCreate
+    ? draft.task_summary.trim() || null
+    : draft.update_summary.trim() || null
   const detailsParts = [
-    draft.what_was_done.trim(),
     draft.technical_approach.trim() ? `Abordagem técnica: ${draft.technical_approach.trim()}` : '',
     draft.next_steps.trim() ? `Próximos passos: ${draft.next_steps.trim()}` : '',
     draft.blocked_reason.trim() ? `Motivo do bloqueio: ${draft.blocked_reason.trim()}` : '',

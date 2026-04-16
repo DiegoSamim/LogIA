@@ -51,3 +51,8 @@ api.interceptors.response.use(
 )
 
 export default api
+
+export function buildFileUrl(path: string): string {
+  const base = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '')
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`
+}

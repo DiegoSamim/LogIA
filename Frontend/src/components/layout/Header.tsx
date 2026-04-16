@@ -24,9 +24,10 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const projectAboutMatch = matchPath('/projects/:projectId/sobre', pathname)
+  const taskDetailMatch = matchPath('/tasks/:taskId', pathname)
   const isChatRoute = pathname === '/chat'
 
-  const { logout, currentProject } = useAppStore()
+  const { logout, currentProject, currentTaskTitle } = useAppStore()
   const { displayName, email, initials } = useAuthProfile()
   const { mode, setMode } = useChatUiStore()
 
@@ -88,6 +89,36 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
 
             <span className="truncate font-medium text-white/60">
               {currentProject?.name ?? 'Projeto'}
+            </span>
+          </>
+        ) : taskDetailMatch ? (
+          <>
+            <Link
+              to="/projects"
+              className="hidden shrink-0 font-medium text-white/35 transition-colors duration-150 hover:text-white/60 sm:block"
+            >
+              Projetos
+            </Link>
+
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="hidden text-white/18 sm:block">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+
+            <span className="truncate font-medium text-white/60">
+              <Link
+                to="/tasks"
+                className="font-medium text-white/35 transition-colors duration-150 hover:text-white/60"
+              >
+                Tarefas
+              </Link>
+            </span>
+
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="hidden text-white/18 sm:block">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+
+            <span className="truncate font-medium text-white/60">
+              {currentTaskTitle ?? 'Tarefa'}
             </span>
           </>
         ) : (

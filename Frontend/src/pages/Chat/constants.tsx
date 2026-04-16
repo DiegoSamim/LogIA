@@ -219,6 +219,11 @@ export const PRIORITY_CHIP_OPTIONS: EnumChipOption[] = [
   { value: 'low',      label: 'Baixa',   colorClass: 'text-green-300  bg-green-400/10  border-green-400/20' },
 ]
 
+export const SUMMARY_UPDATE_DECISION_OPTIONS: EnumChipOption[] = [
+  { value: 'no',  label: 'Manter resumo atual', colorClass: 'text-slate-300 bg-slate-400/10 border-slate-400/20' },
+  { value: 'yes', label: 'Atualizar resumo',    colorClass: 'text-indigo-300 bg-indigo-400/10 border-indigo-400/20' },
+]
+
 // kept for backwards-compat with utils.ts getTaskStatusLabel
 export const TASK_STATUS_OPTIONS = STATUS_CHIP_OPTIONS
 
@@ -264,9 +269,9 @@ export const CREATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
     inputType: 'text',
   },
   {
-    field: 'what_was_done',
-    question: 'O que foi feito nesta tarefa?',
-    placeholder: 'Descreva de forma simples o que foi realizado.',
+    field: 'task_summary',
+    question: 'Qual é o resumo da tarefa?',
+    placeholder: 'Descreva de forma geral e estável o objetivo ou entrega principal desta tarefa.',
     inputType: 'textarea',
   },
   {
@@ -288,8 +293,8 @@ export const CREATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
   },
   {
     field: 'tags',
-    question: 'Adicione tags para facilitar a busca depois.',
-    placeholder: 'Digite uma tag e pressione Enter...',
+    question: 'Quais stacks, tecnologias ou ferramentas foram usadas nesta tarefa?',
+    placeholder: 'Selecione no componente ou digite tecnologias e ferramentas manualmente...',
     inputType: 'tags',
   },
   {
@@ -302,11 +307,24 @@ export const CREATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
 
 export const UPDATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
   {
-    field: 'what_was_done',
-    question: 'O que foi feito / mudou nesta tarefa?',
-    placeholder: 'Resuma o avanço ou ajuste feito nesta tarefa.',
+    field: 'update_summary',
+    question: 'O que foi alterado ou atualizado nesta tarefa?',
+    placeholder: 'Descreva exatamente a novidade desta atualização.',
     required: true,
     inputType: 'textarea',
+  },
+  {
+    field: 'update_task_summary',
+    question: 'Você quer atualizar o resumo da tarefa também?',
+    inputType: 'enum-single',
+    enumOptions: SUMMARY_UPDATE_DECISION_OPTIONS,
+  },
+  {
+    field: 'task_summary',
+    question: 'Atualize o resumo da tarefa, se necessário.',
+    placeholder: 'Edite o resumo geral da tarefa. Este campo começa com o texto atual.',
+    inputType: 'textarea',
+    condition: (draft) => draft.update_task_summary === 'yes',
   },
   {
     field: 'status',
@@ -335,8 +353,8 @@ export const UPDATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
   },
   {
     field: 'tags',
-    question: 'Alguma tag para adicionar ou revisar?',
-    placeholder: 'Digite uma tag e pressione Enter...',
+    question: 'Quais stacks, tecnologias ou ferramentas foram usadas ou revisadas nesta atualização?',
+    placeholder: 'Selecione no componente ou digite stacks e ferramentas manualmente...',
     inputType: 'tags',
   },
 ]

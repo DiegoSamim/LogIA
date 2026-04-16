@@ -129,6 +129,36 @@ async def update_checkpoint(
     return TaskCheckpointResponse.from_orm(cp)
 
 
+@router.get("/tasks/{task_id}/checkpoints", response_model=list[TaskCheckpointResponse])
+async def list_checkpoints(
+    task_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    checkpoints = await task_service.list_checkpoints(db, task_id, current_user.id)
+    return [TaskCheckpointResponse.from_orm(cp) for cp in checkpoints]
+
+
+@router.get("/tasks/{task_id}/attachments", response_model=list[TaskAttachmentResponse])
+async def list_attachments(
+    task_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    attachments = await task_service.list_attachments(db, task_id, current_user.id)
+    return [TaskAttachmentResponse.from_orm(a) for a in attachments]
+
+
+@router.delete("/tasks/{task_id}/attachments/{attachment_id}", status_code=204)
+async def delete_attachment(
+    task_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await task_service.delete_attachment(db, task_id, attachment_id, current_user.id)
+
+
 @router.post("/tasks/{task_id}/attachments", response_model=TaskAttachmentResponse, status_code=201)
 async def upload_attachment(
     task_id: uuid.UUID,

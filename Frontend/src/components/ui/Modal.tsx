@@ -41,7 +41,7 @@ export default function Modal({
         className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.14),transparent_30%),rgba(13,15,20,0.82)] backdrop-blur-md"
       />
 
-      <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(19,22,30,0.98),rgba(13,15,20,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+      <div className="relative z-10 flex max-h-[min(88vh,680px)] w-full max-w-2xl flex-col overflow-hidden rounded-[26px] border border-white/8 bg-[linear-gradient(180deg,rgba(19,22,30,0.98),rgba(13,15,20,0.98))] shadow-[0_30px_120px_rgba(0,0,0,0.55)] backdrop-blur-xl">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.18),transparent_72%)]" />
         <div className="relative border-b border-white/6 px-5 py-5 sm:px-6">
           <div className="flex items-start justify-between gap-4">
@@ -66,7 +66,7 @@ export default function Modal({
           </div>
         </div>
 
-        {children && <div className="relative px-5 py-5 sm:px-6">{children}</div>}
+        {children && <div className="relative flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>}
 
         {footer && (
           <div className="relative flex flex-wrap justify-end gap-2 border-t border-white/6 px-5 py-4 sm:px-6">

@@ -51,7 +51,9 @@ export type TaskRegisterQuestionField =
   | 'status'
   | 'priority'
   | 'feature_or_ticket'
-  | 'what_was_done'
+  | 'task_summary'
+  | 'update_summary'
+  | 'update_task_summary'
   | 'technical_approach'
   | 'next_steps'
   | 'blocked_reason'
@@ -99,7 +101,9 @@ export interface TaskRegisterDraft {
   status: TaskStatus | null
   priority: TaskPriority | null
   feature_or_ticket: string
-  what_was_done: string
+  task_summary: string
+  update_summary: string
+  update_task_summary: 'yes' | 'no' | null
   technical_approach: string
   next_steps: string
   blocked_reason: string
@@ -152,7 +156,7 @@ export interface RegularChatFlowProps {
   onTogglePanel: (open: boolean) => void
 }
 
-export type TaskLookup = Pick<TaskDTO, 'id' | 'title' | 'status'>
+export type TaskLookup = Pick<TaskDTO, 'id' | 'title' | 'status' | 'what_was_done'>
 export type ProjectMemberLookup = Pick<ProjectMemberDTO, 'id' | 'user_id' | 'role' | 'user'>
 
 export type TaskUpdatePreview = Pick<TaskUpdateDTO, 'id' | 'summary' | 'new_status' | 'old_status' | 'created_at' | 'update_type'>

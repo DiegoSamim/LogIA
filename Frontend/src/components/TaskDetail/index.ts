@@ -1,0 +1,6 @@
+export { default as TaskDetailHeader } from './TaskDetailHeader'
+export { default as TaskDetailContent } from './TaskDetailContent'
+export { default as TaskDetailMeta } from './TaskDetailMeta'
+export { default as TaskCheckpoints } from './TaskCheckpoints'
+export { default as TaskUpdateTimeline } from './TaskUpdateTimeline'
+export { default as TaskAttachments } from './TaskAttachments'

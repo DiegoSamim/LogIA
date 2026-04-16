@@ -1,5 +1,5 @@
 import StackBadge from '@/components/ui/StackBadge'
-import { EXPAND_THRESHOLD, avatarColor, formatMemberRole, initials } from '@/lib/sobre'
+import { EXPAND_THRESHOLD, avatarColor, initials } from '@/lib/sobre'
 import type { ProjectMemberDTO, ProjectMemberRole, UserLookupDTO } from '@/data/dtos'
 import type { ArchitectureCardModel, DisplayProfile, LinkItem } from '@/types/sobre'
 import { ArchitectureIcon } from './icons'

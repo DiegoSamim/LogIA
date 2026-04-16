@@ -38,7 +38,9 @@ const EMPTY_DRAFT: TaskRegisterDraft = {
   status: null,
   priority: null,
   feature_or_ticket: '',
-  what_was_done: '',
+  task_summary: '',
+  update_summary: '',
+  update_task_summary: null,
   technical_approach: '',
   next_steps: '',
   blocked_reason: '',
@@ -351,7 +353,9 @@ export default function TaskRegisterFlow({
         status: task.status,
         priority: task.priority,
         feature_or_ticket: task.feature_or_ticket ?? '',
-        what_was_done: task.what_was_done ?? '',
+      task_summary: task.what_was_done ?? '',
+      update_summary: '',
+      update_task_summary: null,
       technical_approach: task.technical_approach ?? '',
       next_steps: task.next_steps ?? '',
       blocked_reason: task.blocked_reason ?? '',
@@ -513,7 +517,7 @@ export default function TaskRegisterFlow({
           status: draft.status ?? 'todo',
           priority: draft.priority ?? undefined,
           feature_or_ticket: draft.feature_or_ticket || null,
-          what_was_done: draft.what_was_done || null,
+          what_was_done: draft.task_summary || null,
           technical_approach: draft.technical_approach || null,
           next_steps: draft.next_steps || null,
           blocked_reason: draft.blocked_reason || null,
@@ -523,22 +527,16 @@ export default function TaskRegisterFlow({
         taskTitle = data.title
         persistedTaskId = data.id
 
-        await taskService.createUpdate(
-          persistedTaskId,
-          buildTaskUpdatePayload({
-            draft,
-            previousStatus: null,
-            isCreate: true,
-          }),
-        )
-
         if (draft.checkpoints.length > 0) {
           await taskService.createCheckpoints(persistedTaskId, draft.checkpoints)
         }
       } else if (draft.taskId) {
         const { data } = await taskService.update(draft.taskId, {
           status: draft.status ?? selectedTask?.status,
-          what_was_done: draft.what_was_done || null,
+          what_was_done:
+            draft.update_task_summary === 'yes'
+              ? draft.task_summary || null
+              : selectedTask?.what_was_done ?? null,
           technical_approach: draft.technical_approach || null,
           next_steps: draft.next_steps || null,
           blocked_reason: draft.blocked_reason || null,

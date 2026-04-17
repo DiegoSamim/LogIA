@@ -69,10 +69,24 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 - `summary (TEXT)` → resumo  
 - `goal (TEXT)` → objetivo  
 - `scope (TEXT)` → escopo  
-- `main_stack (TEXT[])` → tecnologias  
-- `architecture_summary (TEXT)` → visão da arquitetura  
+- `main_stack (TEXT[])` → stack consolidada do projeto, mantida por compatibilidade  
+- `frontend_stack (TEXT[])` → tecnologias de frontend  
+- `backend_stack (TEXT[])` → tecnologias de backend  
+- `infra_stack (TEXT[])` → tecnologias de infraestrutura/cloud  
+- `database_stack (TEXT[])` → tecnologias de persistência, busca e cache  
+- `other_stack (TEXT[])` → tecnologias legadas ou não categorizadas  
+- `architecture_summary (TEXT)` → visão geral legada da arquitetura  
+- `architecture_frontend (TEXT)` → arquitetura da camada de frontend  
+- `architecture_backend (TEXT)` → arquitetura da camada de backend  
+- `architecture_integrations (TEXT)` → integrações e serviços externos  
+- `architecture_data (TEXT)` → modelagem de dados, persistência e fluxo de leitura/escrita  
+- `architecture_infra (TEXT)` → infraestrutura, deploy e operação  
 - `product_context (TEXT)` → contexto do produto  
-- `business_rules (TEXT)` → regras de negócio  
+- `business_rules (TEXT)` → visão geral legada das regras de negócio  
+- `business_rules_core (TEXT)` → regras principais do domínio  
+- `business_rules_permissions (TEXT)` → regras de permissão e papéis  
+- `business_rules_validations (TEXT)` → validações de negócio  
+- `business_rules_constraints (TEXT)` → restrições e exceções do domínio  
 - `team_context (TEXT)` → contexto do time  
 - `default_language (TEXT)` → idioma padrão  
 - `documentation_url (TEXT)` → link da documentação  
@@ -81,6 +95,22 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 - `api_base_url (TEXT)` → base da API  
 - `deployment_url (TEXT)` → URL publicada  
 - `created_at (TIMESTAMP)` → data de criação  
+
+---
+
+## 📂 `project_attachments`
+**Descrição:** Arquivos e imagens anexados ao contexto do projeto
+
+### Atributos
+- `id (UUID)` → identificador do arquivo  
+- `project_id (UUID)` → projeto relacionado  
+- `uploaded_by (UUID)` → usuário que enviou  
+- `file_name (TEXT)` → nome do arquivo  
+- `file_url (TEXT)` → URL de acesso  
+- `file_type (TEXT)` → tipo lógico do arquivo  
+- `mime_type (TEXT)` → tipo MIME  
+- `file_size (INT)` → tamanho em bytes  
+- `created_at (TIMESTAMP)` → data do upload  
 
 ---
 
@@ -114,6 +144,7 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 - `next_steps (TEXT)` → próximos passos  
 - `people_involved (TEXT)` → pessoas envolvidas  
 - `tags (TEXT[])` → marcadores livres  
+- `hours_worked (FLOAT)` → horas trabalhadas registradas para a tarefa  
 - `started_at (TIMESTAMP)` → início da execução  
 - `completed_at (TIMESTAMP)` → conclusão da tarefa  
 - `created_at (TIMESTAMP)` → data de criação  
@@ -279,6 +310,7 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 - `users 1:N refresh_tokens`
 - `users 1:N tasks`
 - `users 1:N task_updates`
+- `users 1:N project_attachments`
 - `users 1:N task_attachments`
 - `users 1:N chat_sessions`
 - `users N:N projects (via project_members)`
@@ -287,6 +319,7 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 
 ## Projeto
 - `projects 1:1 project_profiles`
+- `projects 1:N project_attachments`
 - `projects 1:N tasks`
 - `projects 1:N chat_sessions`
 - `projects 1:N knowledge_chunks`

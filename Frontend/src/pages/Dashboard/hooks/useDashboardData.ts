@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { ProjectDetailDTO, TaskDTO, TaskCategory } from '@/data/dtos'
+
 import { projectService } from '@/services/project.service'
 import { taskService } from '@/services/task.service'
 import { useAppStore } from '@/store/useAppStore'
@@ -18,10 +19,16 @@ export interface CategoryCount {
   count: number
 }
 
+export interface HoursStats {
+  total: number
+  topCategory: { category: TaskCategory; hours: number } | null
+}
+
 export interface DashboardData {
   project: ProjectDetailDTO | null
   stats: DashboardStats
   categoryDistribution: CategoryCount[]
+  hoursStats: HoursStats
   recentTasks: TaskDTO[]
   activityTasks: TaskDTO[]
   loading: boolean
@@ -84,6 +91,19 @@ export function useDashboardData(): DashboardData {
     .map(([category, count]) => ({ category, count }))
     .sort((a, b) => b.count - a.count)
 
+  const totalHours = tasks.reduce((sum, t) => sum + (t.hours_worked ?? 0), 0)
+  const categoryHoursMap = new Map<TaskCategory, number>()
+  for (const task of tasks) {
+    if (task.hours_worked) {
+      categoryHoursMap.set(task.category, (categoryHoursMap.get(task.category) ?? 0) + task.hours_worked)
+    }
+  }
+  const topCategoryByHours = Array.from(categoryHoursMap.entries())
+    .map(([category, hours]) => ({ category, hours }))
+    .sort((a, b) => b.hours - a.hours)[0] ?? null
+
+  const hoursStats: HoursStats = { total: totalHours, topCategory: topCategoryByHours }
+
   const recentTasks = [...tasks]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
@@ -96,6 +116,7 @@ export function useDashboardData(): DashboardData {
     project,
     stats,
     categoryDistribution,
+    hoursStats,
     recentTasks,
     activityTasks,
     loading,

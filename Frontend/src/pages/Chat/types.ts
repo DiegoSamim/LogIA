@@ -60,6 +60,7 @@ export type TaskRegisterQuestionField =
   | 'people_involved'
   | 'tags'
   | 'checkpoints'
+  | 'hours_worked'
 
 export interface ChecklistItem {
   description: string
@@ -111,6 +112,7 @@ export interface TaskRegisterDraft {
   people_involved_member_ids: string[]
   tags: string[]
   checkpoints: ChecklistItem[]
+  hours_worked: string
 }
 
 export interface TaskSummaryViewModel {
@@ -156,7 +158,7 @@ export interface RegularChatFlowProps {
   onTogglePanel: (open: boolean) => void
 }
 
-export type TaskLookup = Pick<TaskDTO, 'id' | 'title' | 'status' | 'what_was_done'>
+export type TaskLookup = Pick<TaskDTO, 'id' | 'title' | 'status' | 'what_was_done' | 'hours_worked'>
 export type ProjectMemberLookup = Pick<ProjectMemberDTO, 'id' | 'user_id' | 'role' | 'user'>
 
 export type TaskUpdatePreview = Pick<TaskUpdateDTO, 'id' | 'summary' | 'new_status' | 'old_status' | 'created_at' | 'update_type'>

@@ -1,4 +1,5 @@
 import type { ProjectDetailDTO } from '@/data/dtos'
+import type { StackCategoryKey } from '@/data/stackCatalog'
 
 export interface ProjectFormState {
   name: string
@@ -9,10 +10,23 @@ export interface ProjectFormState {
   summary: string
   goal: string
   scope: string
-  main_stack: string
+  frontend_stack: string[]
+  backend_stack: string[]
+  infra_stack: string[]
+  database_stack: string[]
+  other_stack: string[]
   architecture_summary: string
+  architecture_frontend: string
+  architecture_backend: string
+  architecture_integrations: string
+  architecture_data: string
+  architecture_infra: string
   product_context: string
   business_rules: string
+  business_rules_core: string
+  business_rules_permissions: string
+  business_rules_validations: string
+  business_rules_constraints: string
   team_context: string
   default_language: string
   documentation_url: string
@@ -44,18 +58,34 @@ export interface DisplayProfile {
   businessRules: DisplayValue
   teamContext: DisplayValue
   defaultLanguage: DisplayValue
-  mainStack: { value: string[] }
+  stackGroups: StackGroupModel[]
   repositoryUrl: DisplayValue
   documentationUrl: DisplayValue
   figmaUrl: DisplayValue
   boardUrl: DisplayValue
   apiBaseUrl: DisplayValue
   deploymentUrl: DisplayValue
+  architectureSections: ContentCardModel[]
+  businessRuleSections: ContentCardModel[]
 }
 
 export interface LinkItem {
   label: string
   url: string
+}
+
+export interface StackGroupModel {
+  key: StackCategoryKey
+  title: string
+  description: string
+  items: string[]
+}
+
+export interface ContentCardModel {
+  title: string
+  description: string
+  accent: 'indigo' | 'emerald' | 'amber' | 'rose' | 'sky'
+  icon: ArchitectureCardIcon
 }
 
 export interface ExpandedCardState {

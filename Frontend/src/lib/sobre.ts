@@ -1,10 +1,17 @@
 import type { ProjectDetailDTO, ProjectMemberRole } from '@/data/dtos'
+import {
+  categorizeStackValues,
+  combineCategorizedStacks,
+  normalizeStackValues,
+  type StackCategoryKey,
+} from '@/data/stackCatalog'
 import type {
-  ArchitectureCardModel,
+  ContentCardModel,
   DisplayProfile,
   DisplayValue,
   LinkItem,
   ProjectFormState,
+  StackGroupModel,
 } from '@/types/sobre'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -27,6 +34,8 @@ export function resolveDisplayValue(actual: string | null | undefined): DisplayV
 }
 
 export function toFormState(project: ProjectDetailDTO): ProjectFormState {
+  const stackGroups = resolveProjectStackGroups(project)
+
   return {
     name: project.name ?? '',
     description: project.description ?? '',
@@ -36,10 +45,23 @@ export function toFormState(project: ProjectDetailDTO): ProjectFormState {
     summary: project.profile?.summary ?? '',
     goal: project.profile?.goal ?? '',
     scope: project.profile?.scope ?? '',
-    main_stack: project.profile?.main_stack.join(', ') ?? '',
+    frontend_stack: stackGroups.frontend_stack,
+    backend_stack: stackGroups.backend_stack,
+    infra_stack: stackGroups.infra_stack,
+    database_stack: stackGroups.database_stack,
+    other_stack: stackGroups.other_stack,
     architecture_summary: project.profile?.architecture_summary ?? '',
+    architecture_frontend: project.profile?.architecture_frontend ?? '',
+    architecture_backend: project.profile?.architecture_backend ?? '',
+    architecture_integrations: project.profile?.architecture_integrations ?? '',
+    architecture_data: project.profile?.architecture_data ?? '',
+    architecture_infra: project.profile?.architecture_infra ?? '',
     product_context: project.profile?.product_context ?? '',
     business_rules: project.profile?.business_rules ?? '',
+    business_rules_core: project.profile?.business_rules_core ?? '',
+    business_rules_permissions: project.profile?.business_rules_permissions ?? '',
+    business_rules_validations: project.profile?.business_rules_validations ?? '',
+    business_rules_constraints: project.profile?.business_rules_constraints ?? '',
     team_context: project.profile?.team_context ?? '',
     default_language: project.profile?.default_language ?? '',
     documentation_url: project.profile?.documentation_url ?? '',
@@ -60,6 +82,10 @@ export function normalizeStack(value: string) {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+export function normalizeStackList(values: string[]) {
+  return normalizeStackValues(values)
 }
 
 export function avatarColor(userId: string): string {
@@ -90,13 +116,9 @@ export function buildDisplayProfile(project: ProjectDetailDTO): DisplayProfile {
   const businessRules = resolveDisplayValue(project.profile?.business_rules)
   const teamContext = resolveDisplayValue(project.profile?.team_context)
   const defaultLanguage = resolveDisplayValue(project.profile?.default_language)
-
-  const mainStack =
-    project.profile?.main_stack?.filter(Boolean).length
-      ? { value: project.profile?.main_stack.filter(Boolean) ?? [] }
-      : project.stack?.length
-        ? { value: project.stack }
-        : { value: [] }
+  const stackGroups = buildStackGroupModels(resolveProjectStackGroups(project))
+  const architectureSections = buildArchitectureCards(project)
+  const businessRuleSections = buildBusinessRuleCards(project)
 
   return {
     description,
@@ -108,52 +130,152 @@ export function buildDisplayProfile(project: ProjectDetailDTO): DisplayProfile {
     businessRules,
     teamContext,
     defaultLanguage,
-    mainStack,
+    stackGroups,
     repositoryUrl: resolveDisplayValue(project.repository_url),
     documentationUrl: resolveDisplayValue(project.profile?.documentation_url),
     figmaUrl: resolveDisplayValue(project.profile?.figma_url),
     boardUrl: resolveDisplayValue(project.profile?.board_url),
     apiBaseUrl: resolveDisplayValue(project.profile?.api_base_url),
     deploymentUrl: resolveDisplayValue(project.profile?.deployment_url),
+    architectureSections,
+    businessRuleSections,
   }
 }
 
-export function buildArchitectureCards(displayProfile: DisplayProfile): ArchitectureCardModel[] {
-  const cards: ArchitectureCardModel[] = [
+function resolveProjectStackGroups(project: ProjectDetailDTO): Record<StackCategoryKey, string[]> {
+  const profile = project.profile
+  const categorized = {
+    frontend_stack: normalizeStackValues(profile?.frontend_stack ?? []),
+    backend_stack: normalizeStackValues(profile?.backend_stack ?? []),
+    infra_stack: normalizeStackValues(profile?.infra_stack ?? []),
+    database_stack: normalizeStackValues(profile?.database_stack ?? []),
+    other_stack: normalizeStackValues(profile?.other_stack ?? []),
+  }
+
+  const hasCategorizedValues = Object.values(categorized).some((items) => items.length > 0)
+  if (hasCategorizedValues) {
+    return categorized
+  }
+
+  return categorizeStackValues(profile?.main_stack?.length ? profile.main_stack : project.stack ?? [])
+}
+
+function buildStackGroupModels(groups: Record<StackCategoryKey, string[]>): StackGroupModel[] {
+  return [
     {
-      title: 'Frontend Experience',
-      description: displayProfile.productContext.value,
+      key: 'frontend_stack',
+      title: 'Frontend',
+      description: 'Interface, web e apps',
+      items: groups.frontend_stack,
+    },
+    {
+      key: 'backend_stack',
+      title: 'Backend',
+      description: 'APIs, serviços e regras',
+      items: groups.backend_stack,
+    },
+    {
+      key: 'infra_stack',
+      title: 'Infra/Cloud',
+      description: 'Deploy, infraestrutura e operação',
+      items: groups.infra_stack,
+    },
+    {
+      key: 'database_stack',
+      title: 'Banco de Dados',
+      description: 'Persistência, busca e cache',
+      items: groups.database_stack,
+    },
+    {
+      key: 'other_stack',
+      title: 'Outras tecnologias',
+      description: 'Itens legados ou personalizados',
+      items: groups.other_stack,
+    },
+  ]
+}
+
+export function buildArchitectureCards(project: ProjectDetailDTO): ContentCardModel[] {
+  const profile = project.profile
+  const cards: ContentCardModel[] = [
+    {
+      title: 'Frontend',
+      description: profile?.architecture_frontend ?? '',
       icon: 'frontend',
+      accent: 'sky',
     },
     {
-      title: 'Application Layer',
-      description: displayProfile.architectureSummary.value,
+      title: 'Backend',
+      description: profile?.architecture_backend || profile?.architecture_summary || '',
       icon: 'backend',
+      accent: 'indigo',
     },
     {
-      title: 'Persistence',
-      description: displayProfile.mainStack.value.length
-        ? `Base apoiada por ${displayProfile.mainStack.value.slice(0, 3).join(', ')} para manter contexto, relações e histórico operacional.`
-        : '',
-      icon: 'storage',
-    },
-    {
-      title: 'Orchestration',
-      description: displayProfile.businessRules.value,
+      title: 'Integrações',
+      description: profile?.architecture_integrations ?? '',
       icon: 'orchestration',
+      accent: 'amber',
+    },
+    {
+      title: 'Dados',
+      description: profile?.architecture_data ?? '',
+      icon: 'storage',
+      accent: 'emerald',
+    },
+    {
+      title: 'Infraestrutura',
+      description: profile?.architecture_infra ?? '',
+      icon: 'orchestration',
+      accent: 'rose',
     },
   ]
 
-  return cards.filter((card) => card.description)
+  return cards
+}
+
+export function buildBusinessRuleCards(project: ProjectDetailDTO): ContentCardModel[] {
+  const profile = project.profile
+  const cards: ContentCardModel[] = [
+    {
+      title: 'Regras principais',
+      description: profile?.business_rules_core || profile?.business_rules || '',
+      icon: 'orchestration',
+      accent: 'indigo',
+    },
+    {
+      title: 'Permissões e papéis',
+      description: profile?.business_rules_permissions ?? '',
+      icon: 'backend',
+      accent: 'sky',
+    },
+    {
+      title: 'Validações',
+      description: profile?.business_rules_validations ?? '',
+      icon: 'storage',
+      accent: 'emerald',
+    },
+    {
+      title: 'Restrições e exceções',
+      description: profile?.business_rules_constraints ?? '',
+      icon: 'orchestration',
+      accent: 'amber',
+    },
+  ]
+
+  return cards
 }
 
 export function buildProjectLinks(displayProfile: DisplayProfile): LinkItem[] {
   return [
-    { label: 'GitHub Repository', url: displayProfile.repositoryUrl.value },
-    { label: 'Product Documentation', url: displayProfile.documentationUrl.value },
-    { label: 'Figma Design File', url: displayProfile.figmaUrl.value },
-    { label: 'Project Board', url: displayProfile.boardUrl.value },
-    { label: 'API Base URL', url: displayProfile.apiBaseUrl.value },
-    { label: 'Deployment URL', url: displayProfile.deploymentUrl.value },
-  ].filter((link) => link.url)
+    { label: 'Repositório', url: displayProfile.repositoryUrl.value },
+    { label: 'Documentação', url: displayProfile.documentationUrl.value },
+    { label: 'Figma', url: displayProfile.figmaUrl.value },
+    { label: 'Quadro do projeto', url: displayProfile.boardUrl.value },
+    { label: 'Base da API', url: displayProfile.apiBaseUrl.value },
+    { label: 'Ambiente publicado', url: displayProfile.deploymentUrl.value },
+  ]
+}
+
+export function combineFormStacks(form: Pick<ProjectFormState, 'frontend_stack' | 'backend_stack' | 'infra_stack' | 'database_stack' | 'other_stack'>) {
+  return combineCategorizedStacks(form)
 }

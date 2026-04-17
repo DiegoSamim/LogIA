@@ -48,6 +48,7 @@ const EMPTY_DRAFT: TaskRegisterDraft = {
   people_involved_member_ids: [],
   tags: [],
   checkpoints: [],
+  hours_worked: '',
 }
 
 function formatPeopleInvolved(members: ProjectMemberDTO[], selectedIds: string[]) {
@@ -363,6 +364,7 @@ export default function TaskRegisterFlow({
       people_involved_member_ids: parsePeopleInvolvedToIds(projectMembers, task.people_involved),
       tags: task.tags ?? [],
       checkpoints: [],
+      hours_worked: '',
     }
 
       setDraft(nextDraft)
@@ -523,6 +525,9 @@ export default function TaskRegisterFlow({
           blocked_reason: draft.blocked_reason || null,
           people_involved: draft.people_involved || null,
           tags: draft.tags.length > 0 ? draft.tags : undefined,
+          hours_worked: draft.hours_worked && parseFloat(draft.hours_worked) > 0
+            ? parseFloat(draft.hours_worked)
+            : undefined,
         })
         taskTitle = data.title
         persistedTaskId = data.id
@@ -542,6 +547,9 @@ export default function TaskRegisterFlow({
           blocked_reason: draft.blocked_reason || null,
           people_involved: draft.people_involved || null,
           tags: draft.tags.length > 0 ? draft.tags : null,
+          hours_worked: draft.hours_worked && parseFloat(draft.hours_worked) > 0
+            ? (selectedTask?.hours_worked ?? 0) + parseFloat(draft.hours_worked)
+            : undefined,
         })
         taskTitle = data.title
       }

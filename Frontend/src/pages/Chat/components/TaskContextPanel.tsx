@@ -111,6 +111,25 @@ export default function TaskContextPanel({
         </div>
       )}
 
+      {draft.hours_worked && parseFloat(draft.hours_worked) > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Horas trabalhadas</p>
+          {draft.action === 'create' && (
+            <p className="mt-1 text-xs text-white/76">{parseFloat(draft.hours_worked).toFixed(1)} h</p>
+          )}
+          {draft.action === 'update' && (
+            <div className="mt-1 space-y-0.5">
+              <p className="text-[11px] text-white/46">
+                Atual: {(selectedTask?.hours_worked ?? 0).toFixed(1)} h
+              </p>
+              <p className="text-xs font-medium text-accent-indigo/80">
+                Total: {((selectedTask?.hours_worked ?? 0) + parseFloat(draft.hours_worked)).toFixed(1)} h
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {!draft.action && !draft.title && !draft.task_summary && !draft.update_summary && (
         <p className="text-xs text-white/28 italic">As respostas aparecerão aqui conforme você preenche.</p>
       )}

@@ -31,6 +31,7 @@ class TaskCreate(BaseModel):
     next_steps: str | None = None
     people_involved: str | None = None
     tags: list[str] = []
+    hours_worked: float | None = None
     started_at: str | None = None
     completed_at: str | None = None
 
@@ -47,6 +48,7 @@ class TaskPatch(BaseModel):
     next_steps: str | None = None
     people_involved: str | None = None
     tags: list[str] | None = None
+    hours_worked: float | None = None
     started_at: str | None = None
     completed_at: str | None = None
 
@@ -66,6 +68,7 @@ class TaskResponse(BaseModel):
     next_steps: str | None
     people_involved: str | None
     tags: list[str]
+    hours_worked: float | None
     started_at: str | None
     completed_at: str | None
     created_at: str
@@ -88,6 +91,7 @@ class TaskResponse(BaseModel):
             next_steps=task.next_steps,
             people_involved=task.people_involved,
             tags=task.tags or [],
+            hours_worked=task.hours_worked,
             started_at=task.started_at.isoformat() if task.started_at else None,
             completed_at=task.completed_at.isoformat() if task.completed_at else None,
             created_at=task.created_at.isoformat(),

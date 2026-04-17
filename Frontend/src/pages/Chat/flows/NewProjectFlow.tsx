@@ -9,6 +9,7 @@ import { getProjectDraftValue } from '@/pages/Chat/utils'
 import ChatMessage from '@/components/chat/ChatMessage'
 import LogoAvatar from '@/components/chat/LogoAvatar'
 import SidePanel from '@/components/chat/SidePanel'
+import AttachmentUploadStep from '@/pages/Chat/components/AttachmentUploadStep'
 import { useNavigate } from 'react-router-dom'
 
 function ProjectSummaryCard({
@@ -116,7 +117,8 @@ export default function NewProjectFlow({
       content: PROJECT_QUESTIONS[0].question,
     },
   ])
-  const [phase, setPhase] = useState<'questions' | 'summary' | 'saving' | 'done'>('questions')
+  const [phase, setPhase] = useState<'questions' | 'summary' | 'saving' | 'attachments' | 'done'>('questions')
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null)
   const [projectInput, setProjectInput] = useState('')
   const projectTextareaRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -215,11 +217,16 @@ export default function NewProjectFlow({
         },
       })
       setCurrentProject({ id: data.id, name: data.name })
-      setPhase('done')
-      setTimeout(() => navigate(`/projects/${data.id}/sobre`), 900)
+      setCreatedProjectId(data.id)
+      setPhase('attachments')
     } catch {
       setPhase('summary')
     }
+  }
+
+  function handleAttachmentsDone() {
+    setPhase('done')
+    setTimeout(() => navigate(`/projects/${createdProjectId}/sobre`), 900)
   }
 
   function handleEditAnswers() {
@@ -272,7 +279,7 @@ export default function NewProjectFlow({
               <span
                 className={[
                   'flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
-                  index < step || phase === 'summary' || phase === 'saving' || phase === 'done'
+                  index < step || phase === 'summary' || phase === 'saving' || phase === 'attachments' || phase === 'done'
                     ? 'bg-accent-indigo/80 text-white'
                     : index === step && phase === 'questions'
                     ? 'border border-accent-indigo/60 text-accent-indigo/80'
@@ -314,12 +321,20 @@ export default function NewProjectFlow({
           {projectMessages.map((message) => (
             <ChatMessage key={message.id} message={message} userInitials={userInitials} />
           ))}
-          {(phase === 'summary' || phase === 'saving' || phase === 'done') && (
+          {(phase === 'summary' || phase === 'saving' || phase === 'attachments' || phase === 'done') && (
             <ProjectSummaryCard
               draft={projectDraft}
               onConfirm={handleConfirmCreate}
               onEdit={handleEditAnswers}
               saving={phase === 'saving'}
+            />
+          )}
+          {phase === 'attachments' && createdProjectId && (
+            <AttachmentUploadStep
+              taskId={createdProjectId}
+              onComplete={handleAttachmentsDone}
+              onSkip={handleAttachmentsDone}
+              uploadFn={(file) => projectService.uploadAttachment(createdProjectId, file)}
             />
           )}
           {phase === 'done' && (

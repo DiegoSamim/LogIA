@@ -57,13 +57,15 @@ const BookIcon = () => (
 
 export default function DashboardProjectLinks({
   profile,
+  repositoryUrl,
 }: {
   profile: ProjectProfileDTO | null
+  repositoryUrl?: string | null
 }) {
   if (!profile) return null
 
   const links = [
-    profile.repository_url && { href: profile.repository_url, icon: <GithubIcon />, label: 'Repositório' },
+    repositoryUrl && { href: repositoryUrl, icon: <GithubIcon />, label: 'Repositório' },
     profile.deployment_url && { href: profile.deployment_url, icon: <GlobeIcon />, label: 'Deploy' },
     profile.figma_url && { href: profile.figma_url, icon: <FigmaIcon />, label: 'Figma' },
     profile.documentation_url && { href: profile.documentation_url, icon: <BookIcon />, label: 'Documentação' },

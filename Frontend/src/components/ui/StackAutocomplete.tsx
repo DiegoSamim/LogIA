@@ -1,31 +1,42 @@
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
-import { STACK_OPTIONS, resolveStackOption, toStackDisplayLabel } from '@/data/stackCatalog'
+import {
+  STACK_OPTIONS,
+  getStackOptionsByCategory,
+  normalizeStackValues,
+  resolveStackOption,
+  toStackDisplayLabel,
+  type StackCategoryKey,
+} from '@/data/stackCatalog'
 import StackBadge from '@/components/ui/StackBadge'
 
 export default function StackAutocomplete({
   value,
   onChange,
   placeholder,
+  category,
   allowCustom = true,
 }: {
   value: string[]
   onChange: (value: string[]) => void
   placeholder?: string
+  category?: StackCategoryKey
   allowCustom?: boolean
 }) {
+  const options = (category ? getStackOptionsByCategory(category) : STACK_OPTIONS).map((option) => option.label)
+
   return (
     <Autocomplete
       multiple
       freeSolo={allowCustom}
-      options={STACK_OPTIONS.map((option) => option.label)}
+      options={options}
       value={value}
       onChange={(_, nextValue) => {
-        const normalized = nextValue
+        const normalized = normalizeStackValues(nextValue
           .map((item) => toStackDisplayLabel(typeof item === 'string' ? item : String(item)))
-          .filter(Boolean)
+          .filter(Boolean))
 
-        onChange(Array.from(new Set(normalized)))
+        onChange(normalized)
       }}
       filterSelectedOptions
       autoHighlight

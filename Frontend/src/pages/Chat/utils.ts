@@ -81,6 +81,7 @@ export function buildCreateTaskSummary(draft: TaskRegisterDraft): TaskSummaryVie
     ...(draft.checkpoints.length > 0
       ? [{ label: 'Checklist', value: `${draft.checkpoints.length} item${draft.checkpoints.length > 1 ? 's' : ''}`, compact: true }]
       : []),
+    { label: 'Horas trabalhadas', value: draft.hours_worked && parseFloat(draft.hours_worked) > 0 ? `${parseFloat(draft.hours_worked).toFixed(1)} h` : '', compact: true },
   ].filter((field) =>
     Array.isArray(field.value) ? field.value.length > 0 : field.value.trim().length > 0,
   )
@@ -95,6 +96,7 @@ export function buildCreateTaskSummary(draft: TaskRegisterDraft): TaskSummaryVie
     !draft.people_involved.trim() ? 'Pessoas envolvidas' : null,
     draft.tags.length === 0 ? 'Tags' : null,
     draft.checkpoints.length === 0 ? 'Checklist' : null,
+    !draft.hours_worked || parseFloat(draft.hours_worked) <= 0 ? 'Horas trabalhadas' : null,
   ].filter(Boolean) as string[]
 
   return {
@@ -129,6 +131,7 @@ export function buildUpdateTaskSummary(draft: TaskRegisterDraft, tasks: TaskLook
     { label: 'Próximos passos', value: draft.next_steps, multiline: true },
     { label: 'Motivo do bloqueio', value: draft.blocked_reason, multiline: true },
     { label: 'Tags', value: draft.tags, kind: 'tags' as const },
+    { label: 'Horas adicionais', value: draft.hours_worked && parseFloat(draft.hours_worked) > 0 ? `${parseFloat(draft.hours_worked).toFixed(1)} h` : '', compact: true },
   ].filter((field) =>
     Array.isArray(field.value) ? field.value.length > 0 : field.value.trim().length > 0,
   )

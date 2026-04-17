@@ -97,9 +97,23 @@ export interface ProjectProfileDTO {
   goal: string | null                // source: project_profiles.goal
   scope: string | null               // source: project_profiles.scope
   main_stack: string[]               // source: project_profiles.main_stack (TEXT[])
+  frontend_stack: string[]           // source: project_profiles.frontend_stack (TEXT[])
+  backend_stack: string[]            // source: project_profiles.backend_stack (TEXT[])
+  infra_stack: string[]              // source: project_profiles.infra_stack (TEXT[])
+  database_stack: string[]           // source: project_profiles.database_stack (TEXT[])
+  other_stack: string[]              // source: project_profiles.other_stack (TEXT[])
   architecture_summary: string | null // source: project_profiles.architecture_summary
+  architecture_frontend: string | null // source: project_profiles.architecture_frontend
+  architecture_backend: string | null // source: project_profiles.architecture_backend
+  architecture_integrations: string | null // source: project_profiles.architecture_integrations
+  architecture_data: string | null   // source: project_profiles.architecture_data
+  architecture_infra: string | null  // source: project_profiles.architecture_infra
   product_context: string | null     // source: project_profiles.product_context
   business_rules: string | null      // source: project_profiles.business_rules
+  business_rules_core: string | null // source: project_profiles.business_rules_core
+  business_rules_permissions: string | null // source: project_profiles.business_rules_permissions
+  business_rules_validations: string | null // source: project_profiles.business_rules_validations
+  business_rules_constraints: string | null // source: project_profiles.business_rules_constraints
   team_context: string | null        // source: project_profiles.team_context
   default_language: string | null    // source: project_profiles.default_language
   documentation_url: string | null   // source: project_profiles.documentation_url
@@ -168,6 +182,7 @@ export interface TaskDTO {
   next_steps: string | null           // source: tasks.next_steps
   people_involved: string | null      // source: tasks.people_involved
   tags: string[]                      // source: tasks.tags (TEXT[])
+  hours_worked: number | null         // source: tasks.hours_worked
   started_at: string | null           // source: tasks.started_at
   completed_at: string | null         // source: tasks.completed_at
   created_at: string                  // source: tasks.created_at
@@ -205,6 +220,21 @@ export interface TaskCheckpointDTO {
 }
 
 /**
+ * DTO de anexo de projeto (`project_attachments`).
+ */
+export interface ProjectAttachmentDTO {
+  id: string            // source: project_attachments.id
+  project_id: string    // source: project_attachments.project_id
+  uploaded_by: string   // source: project_attachments.uploaded_by
+  file_name: string     // source: project_attachments.file_name
+  file_url: string      // source: project_attachments.file_url
+  file_type: string | null
+  mime_type: string | null
+  file_size: number | null
+  created_at: string    // source: project_attachments.created_at
+}
+
+/**
  * DTO de anexo de tarefa (`task_attachments`).
  * Metadados do arquivo — o binário fica no disco, não no banco.
  */
@@ -224,6 +254,11 @@ export interface CreateCheckpointsBatchRequest {
   items: { description: string; order_index: number }[]
 }
 
+export interface CreateTaskCheckpointRequest {
+  description: string
+  order_index?: number
+}
+
 export interface CreateTaskRequest {
   title: string
   feature_or_ticket?: string | null
@@ -236,6 +271,7 @@ export interface CreateTaskRequest {
   next_steps?: string | null
   people_involved?: string | null
   tags?: string[]
+  hours_worked?: number | null
   started_at?: string | null
   completed_at?: string | null
 }
@@ -252,6 +288,7 @@ export interface UpdateTaskRequest {
   next_steps?: string | null
   people_involved?: string | null
   tags?: string[] | null
+  hours_worked?: number | null
   started_at?: string | null
   completed_at?: string | null
 }

@@ -8,6 +8,7 @@ import DashboardTechStack from '@/pages/Dashboard/components/DashboardTechStack'
 import DashboardCategoryChart from '@/pages/Dashboard/components/DashboardCategoryChart'
 import DashboardRecentTasks from '@/pages/Dashboard/components/DashboardRecentTasks'
 import DashboardProjectLinks from '@/pages/Dashboard/components/DashboardProjectLinks'
+import DashboardHoursCard from '@/pages/Dashboard/components/DashboardHoursCard'
 
 function SkeletonBlock({ className = '' }: { className?: string }) {
   return (
@@ -39,7 +40,7 @@ function LoadingSkeleton() {
 export default function Dashboard() {
   const navigate = useNavigate()
   const currentProject = useAppStore((s) => s.currentProject)
-  const { project, stats, categoryDistribution, recentTasks, activityTasks, loading, error } =
+  const { project, stats, categoryDistribution, hoursStats, recentTasks, activityTasks, loading, error } =
     useDashboardData()
 
   if (!currentProject) {
@@ -113,6 +114,10 @@ export default function Dashboard() {
             <DashboardTechStack stack={techStack} />
           </DashboardSection>
 
+          <DashboardSection title="Horas Trabalhadas">
+            <DashboardHoursCard hours={hoursStats} />
+          </DashboardSection>
+
           <DashboardSection title="Distribuição por Categoria">
             <DashboardCategoryChart distribution={categoryDistribution} />
           </DashboardSection>
@@ -138,7 +143,7 @@ export default function Dashboard() {
       {/* Project links — renders only when at least one link exists */}
       {project?.profile && (
         <DashboardSection title="Links do Projeto">
-          <DashboardProjectLinks profile={project.profile} />
+          <DashboardProjectLinks profile={project.profile} repositoryUrl={project.repository_url} />
         </DashboardSection>
       )}
     </div>

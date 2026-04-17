@@ -1,12 +1,13 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Response, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.engine import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.schemas.project import (
+    ProjectAttachmentResponse,
     ProjectCreate,
     ProjectDetailResponse,
     ProjectMemberCreate,
@@ -144,4 +145,36 @@ async def remove_project_member(
         uuid.UUID(member_id),
         current_user.id,
     )
+    return Response(status_code=204)
+
+
+@router.get("/{project_id}/attachments", response_model=list[ProjectAttachmentResponse])
+async def list_project_attachments(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    attachments = await project_service.list_attachments(db, uuid.UUID(project_id), current_user.id)
+    return [ProjectAttachmentResponse.from_orm(a) for a in attachments]
+
+
+@router.post("/{project_id}/attachments", response_model=ProjectAttachmentResponse, status_code=201)
+async def upload_project_attachment(
+    project_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    att = await project_service.create_attachment(db, uuid.UUID(project_id), current_user.id, file)
+    return ProjectAttachmentResponse.from_orm(att)
+
+
+@router.delete("/{project_id}/attachments/{attachment_id}", status_code=204)
+async def delete_project_attachment(
+    project_id: str,
+    attachment_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await project_service.delete_attachment(db, uuid.UUID(project_id), uuid.UUID(attachment_id), current_user.id)
     return Response(status_code=204)

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { ProjectDetailDTO, ProjectMemberRole, UserLookupDTO } from '@/data/dtos'
+import type { ProjectAttachmentDTO, ProjectDetailDTO, ProjectMemberRole, UserLookupDTO } from '@/data/dtos'
 import {
   projectService,
   type UpdateProfileRequest,
   type UpdateProjectRequest,
 } from '@/services/project.service'
+import ProjectAttachments from '@/components/Sobre/ProjectAttachments'
 import { useAppStore } from '@/store/useAppStore'
 import {
   AboutEditContent,
@@ -17,11 +18,10 @@ import {
 } from '@/components/Sobre'
 import type { ExpandedCardState, ProjectFormState } from '@/types/sobre'
 import {
-  buildArchitectureCards,
   buildDisplayProfile,
   buildProjectLinks,
+  combineFormStacks,
   normalizeNullable,
-  normalizeStack,
   toFormState,
 } from '@/lib/sobre'
 
@@ -47,6 +47,24 @@ export default function Sobre() {
   const [memberMutationLoading, setMemberMutationLoading] = useState<string | null>(null)
   const [memberError, setMemberError] = useState<string | null>(null)
   const [selectedRole, setSelectedRole] = useState<ProjectMemberRole>('viewer')
+  const [attachments, setAttachments] = useState<ProjectAttachmentDTO[]>([])
+  const [editScrollTarget, setEditScrollTarget] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (editing && editScrollTarget) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(editScrollTarget)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        setEditScrollTarget(null)
+      }, 60)
+      return () => clearTimeout(timer)
+    }
+  }, [editing, editScrollTarget])
+
+  function handleStartEditing(sectionId?: string) {
+    setEditing(true)
+    if (sectionId) setEditScrollTarget(sectionId)
+  }
 
   useEffect(() => {
     if (!projectId) {
@@ -59,12 +77,15 @@ export default function Sobre() {
     setError(null)
     setNotFound(false)
 
-    projectService
-      .get(projectId)
-      .then(({ data }) => {
-        setProject(data)
-        setForm(toFormState(data))
-        setCurrentProject({ id: data.id, name: data.name })
+    Promise.all([
+      projectService.get(projectId),
+      projectService.listAttachments(projectId),
+    ])
+      .then(([projectRes, attachmentsRes]) => {
+        setProject(projectRes.data)
+        setForm(toFormState(projectRes.data))
+        setCurrentProject({ id: projectRes.data.id, name: projectRes.data.name })
+        setAttachments(attachmentsRes.data)
       })
       .catch((err: unknown) => {
         const status = (err as { response?: { status?: number } })?.response?.status
@@ -78,10 +99,6 @@ export default function Sobre() {
   }, [projectId, setCurrentProject])
 
   const displayProfile = useMemo(() => (project ? buildDisplayProfile(project) : null), [project])
-  const architectureCards = useMemo(
-    () => (displayProfile ? buildArchitectureCards(displayProfile) : []),
-    [displayProfile],
-  )
   const links = useMemo(() => (displayProfile ? buildProjectLinks(displayProfile) : []), [displayProfile])
   const canEditProject = Boolean(currentUser?.id && project?.user_id === currentUser.id)
   const canManageMembers = Boolean(
@@ -136,10 +153,24 @@ export default function Sobre() {
       summary: normalizeNullable(form.summary),
       goal: normalizeNullable(form.goal),
       scope: normalizeNullable(form.scope),
-      main_stack: normalizeStack(form.main_stack),
+      main_stack: combineFormStacks(form),
+      frontend_stack: form.frontend_stack,
+      backend_stack: form.backend_stack,
+      infra_stack: form.infra_stack,
+      database_stack: form.database_stack,
+      other_stack: form.other_stack,
       architecture_summary: normalizeNullable(form.architecture_summary),
+      architecture_frontend: normalizeNullable(form.architecture_frontend),
+      architecture_backend: normalizeNullable(form.architecture_backend),
+      architecture_integrations: normalizeNullable(form.architecture_integrations),
+      architecture_data: normalizeNullable(form.architecture_data),
+      architecture_infra: normalizeNullable(form.architecture_infra),
       product_context: normalizeNullable(form.product_context),
       business_rules: normalizeNullable(form.business_rules),
+      business_rules_core: normalizeNullable(form.business_rules_core),
+      business_rules_permissions: normalizeNullable(form.business_rules_permissions),
+      business_rules_validations: normalizeNullable(form.business_rules_validations),
+      business_rules_constraints: normalizeNullable(form.business_rules_constraints),
       team_context: normalizeNullable(form.team_context),
       default_language: normalizeNullable(form.default_language),
       documentation_url: normalizeNullable(form.documentation_url),
@@ -305,13 +336,12 @@ export default function Sobre() {
 
       <div className="relative z-10 mx-auto max-w-7xl">
         <div
-          className="overflow-hidden rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(19,22,30,0.94),rgba(13,15,20,0.94))] shadow-[0_28px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl"
+          className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(19,22,30,0.94),rgba(13,15,20,0.94))] shadow-[0_28px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl"
           style={{ boxShadow: `0 28px 90px rgba(0,0,0,0.34), 0 0 0 1px ${accentColor}14 inset` }}
         >
           <AboutHero
             project={project}
             displayProfile={displayProfile}
-            members={members}
             accentColor={accentColor}
             editing={editing}
             saving={saving}
@@ -320,49 +350,58 @@ export default function Sobre() {
             error={error}
             onCancel={handleCancel}
             onSave={handleSave}
-            onEdit={() => setEditing(true)}
+            onEdit={() => handleStartEditing()}
             onDelete={() => setDeleteModalOpen(true)}
           />
 
           {editing ? (
             <AboutEditContent form={form} onFieldChange={updateField} />
           ) : (
-            <AboutReadContent
-              displayProfile={displayProfile}
-              architectureCards={architectureCards}
-              links={links}
-              members={members}
-              expandedFields={expandedFields}
-              onToggleExpandField={handleExpand}
-              onOpenCardModal={handleOpenCardModal}
-              onStartEditing={() => setEditing(true)}
-              canEditProject={canEditProject}
-              canManageMembers={canManageMembers}
-              memberEmailQuery={memberEmailQuery}
-              selectedRole={selectedRole}
-              memberLookup={memberLookup}
-              memberSearchLoading={memberSearchLoading}
-              memberMutationLoading={memberMutationLoading}
-              memberError={memberError}
-              onMemberEmailChange={(value) => {
-                setMemberEmailQuery(value)
-                setMemberLookup(null)
-                setMemberError(null)
-              }}
-              onRoleChange={setSelectedRole}
-              onSearchMember={() => {
-                void handleSearchMember()
-              }}
-              onAddMember={() => {
-                void handleAddMember()
-              }}
-              onUpdateMemberRole={(memberId, role) => {
-                void handleUpdateMemberRole(memberId, role)
-              }}
-              onRemoveMember={(memberId) => {
-                void handleRemoveMember(memberId)
-              }}
-            />
+            <>
+              <AboutReadContent
+                displayProfile={displayProfile}
+                links={links}
+                members={members}
+                expandedFields={expandedFields}
+                onToggleExpandField={handleExpand}
+                onOpenCardModal={handleOpenCardModal}
+                onStartEditing={(sectionId) => handleStartEditing(sectionId)}
+                canEditProject={canEditProject}
+                canManageMembers={canManageMembers}
+                memberEmailQuery={memberEmailQuery}
+                selectedRole={selectedRole}
+                memberLookup={memberLookup}
+                memberSearchLoading={memberSearchLoading}
+                memberMutationLoading={memberMutationLoading}
+                memberError={memberError}
+                onMemberEmailChange={(value) => {
+                  setMemberEmailQuery(value)
+                  setMemberLookup(null)
+                  setMemberError(null)
+                }}
+                onRoleChange={setSelectedRole}
+                onSearchMember={() => {
+                  void handleSearchMember()
+                }}
+                onAddMember={() => {
+                  void handleAddMember()
+                }}
+                onUpdateMemberRole={(memberId, role) => {
+                  void handleUpdateMemberRole(memberId, role)
+                }}
+                onRemoveMember={(memberId) => {
+                  void handleRemoveMember(memberId)
+                }}
+              />
+              <div className="border-t border-white/6 px-5 py-5 sm:px-7">
+                <ProjectAttachments
+                  projectId={project.id}
+                  attachments={attachments}
+                  onNewAttachment={(a) => setAttachments((prev) => [...prev, a])}
+                  onDeleteAttachment={(id) => setAttachments((prev) => prev.filter((a) => a.id !== id))}
+                />
+              </div>
+            </>
           )}
         </div>
       </div>

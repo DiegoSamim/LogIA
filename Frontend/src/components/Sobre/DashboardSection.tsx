@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
 
 export default function DashboardSection({
+  id,
   title,
   subtitle,
   children,
   badge,
   className = '',
 }: {
+  id?: string
   title: string
   subtitle?: string
   children: ReactNode
@@ -14,7 +16,7 @@ export default function DashboardSection({
   className?: string
 }) {
   return (
-    <section className={['rounded-[20px] border border-white/7 bg-surface-container/88 p-5 shadow-[0_20px_48px_rgba(0,0,0,0.22)] backdrop-blur-xl', className].join(' ')}>
+    <section id={id} className={['rounded-[20px] border border-white/7 bg-surface-container/88 p-5 shadow-[0_20px_48px_rgba(0,0,0,0.22)] backdrop-blur-xl', className].join(' ')}>
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.22em] text-white/30 uppercase">{title}</p>

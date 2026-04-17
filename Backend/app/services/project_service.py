@@ -1,13 +1,15 @@
 import uuid
+from pathlib import Path
 from typing import Any
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import get_settings
 from app.models.chat import ChatSession
-from app.models.project import Project, ProjectProfile
+from app.models.project import Project, ProjectAttachment, ProjectProfile
 from app.models.task import ProjectMember, Task
 from app.models.user import User
 from app.schemas.project import (
@@ -18,6 +20,166 @@ from app.schemas.project import (
     ProjectProfileUpdate,
     ProjectUpdate,
 )
+
+settings = get_settings()
+
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+STACK_CATEGORY_FIELDS = (
+    "frontend_stack",
+    "backend_stack",
+    "infra_stack",
+    "database_stack",
+    "other_stack",
+)
+STACK_CATALOG_BY_CATEGORY: dict[str, tuple[str, ...]] = {
+    "frontend_stack": (
+        "react",
+        "vite",
+        "next.js",
+        "angular",
+        "vue",
+        "nuxt",
+        "react native",
+        "expo",
+        "tailwind css",
+        "material ui",
+    ),
+    "backend_stack": (
+        "node.js",
+        "express",
+        "nestjs",
+        "fastapi",
+        "django",
+        "spring boot",
+        ".net",
+        "go",
+        "laravel",
+        "ruby on rails",
+    ),
+    "infra_stack": (
+        "aws",
+        "azure",
+        "gcp",
+        "docker",
+        "kubernetes",
+        "terraform",
+        "github actions",
+        "nginx",
+        "cloudflare",
+    ),
+    "database_stack": (
+        "postgresql",
+        "mysql",
+        "sql server",
+        "mongodb",
+        "redis",
+        "elasticsearch",
+    ),
+}
+STACK_LABEL_LOOKUP: dict[str, str] = {
+    "react": "React",
+    "vite": "Vite",
+    "next.js": "Next.js",
+    "angular": "Angular",
+    "vue": "Vue",
+    "nuxt": "Nuxt",
+    "react native": "React Native",
+    "expo": "Expo",
+    "tailwind css": "Tailwind CSS",
+    "material ui": "Material UI",
+    "node.js": "Node.js",
+    "express": "Express",
+    "nestjs": "NestJS",
+    "fastapi": "FastAPI",
+    "django": "Django",
+    "spring boot": "Spring Boot",
+    ".net": ".NET",
+    "go": "Go",
+    "laravel": "Laravel",
+    "ruby on rails": "Ruby on Rails",
+    "aws": "AWS",
+    "azure": "Azure",
+    "gcp": "GCP",
+    "docker": "Docker",
+    "kubernetes": "Kubernetes",
+    "terraform": "Terraform",
+    "github actions": "GitHub Actions",
+    "nginx": "Nginx",
+    "cloudflare": "Cloudflare",
+    "postgresql": "PostgreSQL",
+    "mysql": "MySQL",
+    "sql server": "SQL Server",
+    "mongodb": "MongoDB",
+    "redis": "Redis",
+    "elasticsearch": "Elasticsearch",
+}
+STACK_CATEGORY_LOOKUP = {
+    label: category
+    for category, labels in STACK_CATALOG_BY_CATEGORY.items()
+    for label in labels
+}
+
+
+def _normalize_stack_list(values: list[str] | None) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in values or []:
+        trimmed = value.strip()
+        if not trimmed:
+            continue
+        key = trimmed.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(STACK_LABEL_LOOKUP.get(key, trimmed))
+    return normalized
+
+
+def _categorize_stack(values: list[str] | None) -> dict[str, list[str]]:
+    categorized = {field: [] for field in STACK_CATEGORY_FIELDS}
+    for value in _normalize_stack_list(values):
+        key = value.lower()
+        category = STACK_CATEGORY_LOOKUP.get(key, "other_stack")
+        categorized[category].append(value)
+    return categorized
+
+
+def _combine_stack_categories(values_by_category: dict[str, list[str]]) -> list[str]:
+    combined: list[str] = []
+    for field in STACK_CATEGORY_FIELDS:
+        combined.extend(values_by_category.get(field, []))
+    return _normalize_stack_list(combined)
+
+
+def _normalize_profile_payload(payload: dict[str, Any], existing_profile: ProjectProfile | None = None) -> dict[str, Any]:
+    normalized = dict(payload)
+    has_categorized_stack_update = any(field in normalized for field in STACK_CATEGORY_FIELDS)
+
+    if "main_stack" in normalized and not has_categorized_stack_update:
+        derived = _categorize_stack(normalized.get("main_stack"))
+        normalized.update(derived)
+        normalized["main_stack"] = _combine_stack_categories(derived)
+        return normalized
+
+    if has_categorized_stack_update:
+        categorized_values: dict[str, list[str]] = {}
+        for field in STACK_CATEGORY_FIELDS:
+            if field in normalized:
+                categorized_values[field] = _normalize_stack_list(normalized.get(field))
+            elif existing_profile is not None:
+                categorized_values[field] = _normalize_stack_list(getattr(existing_profile, field, []))
+        normalized.update(categorized_values)
+        normalized["main_stack"] = _combine_stack_categories(categorized_values)
+
+    return normalized
 
 
 async def create(db: AsyncSession, user_id: uuid.UUID, data: ProjectCreate) -> Project:
@@ -41,7 +203,11 @@ async def create(db: AsyncSession, user_id: uuid.UUID, data: ProjectCreate) -> P
     )
     db.add(creator_member)
 
-    profile_kwargs = data.profile.model_dump() if data.profile else {}
+    profile_kwargs = (
+        _normalize_profile_payload(data.profile.model_dump(exclude_none=True, exclude_defaults=True))
+        if data.profile
+        else {}
+    )
     profile = ProjectProfile(id=uuid.uuid4(), project_id=project.id, **profile_kwargs)
     db.add(profile)
 
@@ -112,14 +278,19 @@ async def update_profile(
     project = await verify_project_owner(db, project_id, user_id)
 
     if project.profile:
-        for field, value in data.model_dump(exclude_unset=True).items():
+        profile_payload = _normalize_profile_payload(
+            data.model_dump(exclude_unset=True),
+            project.profile,
+        )
+        for field, value in profile_payload.items():
             setattr(project.profile, field, value)
         db.add(project.profile)
     else:
+        profile_payload = _normalize_profile_payload(data.model_dump(exclude_unset=True))
         profile = ProjectProfile(
             id=uuid.uuid4(),
             project_id=project.id,
-            **data.model_dump(),
+            **profile_payload,
         )
         db.add(profile)
 
@@ -279,6 +450,86 @@ async def remove_member(
             )
 
     await db.delete(member)
+    await db.commit()
+
+
+async def list_attachments(
+    db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID
+) -> list[ProjectAttachment]:
+    await verify_project_access(db, project_id, user_id)
+    result = await db.execute(
+        select(ProjectAttachment)
+        .where(ProjectAttachment.project_id == project_id)
+        .order_by(ProjectAttachment.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def create_attachment(
+    db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID, file: UploadFile
+) -> ProjectAttachment:
+    await verify_project_access(db, project_id, user_id)
+
+    mime = file.content_type or ""
+    if mime not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Tipo de arquivo não permitido: {mime}. Use PDF ou imagem.",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Arquivo excede o tamanho máximo permitido de 10 MB.",
+        )
+
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_ext = Path(file.filename or "file").suffix
+    unique_name = f"{uuid.uuid4()}{file_ext}"
+    dest = upload_dir / unique_name
+    dest.write_bytes(content)
+
+    file_type = "pdf" if mime == "application/pdf" else "image"
+    file_url = f"/files/{unique_name}"
+
+    att = ProjectAttachment(
+        id=uuid.uuid4(),
+        project_id=project_id,
+        uploaded_by=user_id,
+        file_name=file.filename or unique_name,
+        file_url=file_url,
+        file_type=file_type,
+        mime_type=mime,
+        file_size=len(content),
+    )
+    db.add(att)
+    await db.commit()
+    await db.refresh(att)
+    return att
+
+
+async def delete_attachment(
+    db: AsyncSession, project_id: uuid.UUID, attachment_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    await verify_project_access(db, project_id, user_id)
+    result = await db.execute(
+        select(ProjectAttachment).where(
+            ProjectAttachment.id == attachment_id,
+            ProjectAttachment.project_id == project_id,
+        )
+    )
+    att = result.scalar_one_or_none()
+    if not att:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anexo não encontrado.")
+
+    file_path = Path(settings.UPLOAD_DIR) / Path(att.file_url).name
+    if file_path.exists():
+        file_path.unlink()
+
+    await db.delete(att)
     await db.commit()
 
 

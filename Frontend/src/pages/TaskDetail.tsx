@@ -54,9 +54,14 @@ export default function TaskDetail() {
           setCheckpoints(checkpointsRes.data)
           setAttachments(attachmentsRes.data)
         }
-      } catch {
+      } catch (err: unknown) {
         if (active) {
-          setError('Não foi possível carregar a tarefa.')
+          const status = (err as { response?: { status?: number } })?.response?.status
+          if (status === 404 || status === 403) {
+            setError('Tarefa não encontrada ou você não tem acesso a este recurso.')
+          } else {
+            setError('Não foi possível carregar a tarefa.')
+          }
         }
       } finally {
         if (active) setLoading(false)
@@ -197,6 +202,11 @@ export default function TaskDetail() {
               <TaskCheckpoints
                 taskId={task.id}
                 checkpoints={checkpoints}
+                onNewCheckpoint={(checkpoint) =>
+                  setCheckpoints((prev) =>
+                    [...prev, checkpoint].sort((a, b) => a.order_index - b.order_index),
+                  )
+                }
                 onToggle={(id, isDone) => { void handleToggleCheckpoint(id, isDone) }}
               />
 

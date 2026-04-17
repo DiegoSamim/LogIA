@@ -1,19 +1,25 @@
 import StackBadge from '@/components/ui/StackBadge'
-import { EXPAND_THRESHOLD, avatarColor, initials } from '@/lib/sobre'
+import { avatarColor, formatMemberRole, initials } from '@/lib/sobre'
 import type { ProjectMemberDTO, ProjectMemberRole, UserLookupDTO } from '@/data/dtos'
-import type { ArchitectureCardModel, DisplayProfile, LinkItem } from '@/types/sobre'
-import { ArchitectureIcon } from './icons'
-import CardExpandButton from './CardExpandButton'
-import CardFade from './CardFade'
+import type { DisplayProfile, LinkItem, LinkType } from '@/types/sobre'
 import ClampedText from './ClampedText'
 import DashboardSection from './DashboardSection'
 import EmptyCta from './EmptyCta'
 import ExpandableInfoCard from './ExpandableInfoCard'
 import LinkRow from './LinkRow'
+import { LinkTypeIcon } from './icons'
+
+const LINK_ICON_MAP: Record<string, LinkType> = {
+  'Repositório': 'github',
+  'Documentação': 'book',
+  'Figma': 'figma',
+  'Quadro do projeto': 'grid',
+  'Base da API': 'terminal',
+  'Ambiente publicado': 'globe',
+}
 
 export default function AboutReadContent({
   displayProfile,
-  architectureCards,
   links,
   members,
   expandedFields,
@@ -36,13 +42,12 @@ export default function AboutReadContent({
   onRemoveMember,
 }: {
   displayProfile: DisplayProfile
-  architectureCards: ArchitectureCardModel[]
   links: LinkItem[]
   members: ProjectMemberDTO[]
   expandedFields: Record<string, boolean>
   onToggleExpandField: (label: string, value: string) => void
   onOpenCardModal: (label: string, value: string) => void
-  onStartEditing: () => void
+  onStartEditing: (sectionId?: string) => void
   canEditProject: boolean
   canManageMembers: boolean
   memberEmailQuery: string
@@ -58,157 +63,221 @@ export default function AboutReadContent({
   onUpdateMemberRole: (memberId: string, role: ProjectMemberRole) => void
   onRemoveMember: (memberId: string) => void
 }) {
-  const hasOverview = Boolean(displayProfile.summary.value || displayProfile.goal.value || displayProfile.scope.value)
-  const hasArchitecture = Boolean(
-    displayProfile.architectureSummary.value ||
-      displayProfile.productContext.value ||
-      displayProfile.businessRules.value ||
-      displayProfile.teamContext.value,
-  )
-  const hasLinks = links.length > 0
-  const hasStack = displayProfile.mainStack.value.length > 0
   const roleOptions: ProjectMemberRole[] = ['admin', 'editor', 'viewer']
 
-  function renderLockedEmptyState(label: string) {
-    if (canEditProject) return <EmptyCta label={label} onClick={onStartEditing} />
-    return <p className="text-xs leading-6 text-white/34">Somente o criador do projeto pode preencher esta seção.</p>
+  function EditBadge({ sectionId }: { sectionId: string }) {
+    if (!canEditProject) return null
+    return (
+      <button
+        type="button"
+        onClick={() => onStartEditing(sectionId)}
+        className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-medium text-white/28 transition-[color,background-color] duration-150 hover:bg-white/5 hover:text-white/58"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+        Editar
+      </button>
+    )
   }
+
+  const overviewEmpty =
+    !displayProfile.summary.value &&
+    !displayProfile.scope.value &&
+    !displayProfile.goal.value &&
+    !displayProfile.productContext.value &&
+    !displayProfile.teamContext.value
 
   return (
     <div className="px-5 py-5 sm:px-7 sm:py-6">
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        {/* Left column */}
         <div className="flex min-w-0 flex-col gap-5">
-          <DashboardSection title="Resumo do Projeto" subtitle="Visão editorial do projeto com foco em contexto, objetivo e escopo.">
-            {hasOverview ? (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-semibold tracking-tight text-white/94">{displayProfile.summary.value}</h2>
-                  {displayProfile.scope.value && (
-                    <ClampedText
-                      value={displayProfile.scope.value}
-                      label="Escopo"
-                      onExpand={onToggleExpandField}
-                      expanded={Boolean(expandedFields.Escopo)}
-                      rows={3}
-                    />
-                  )}
-                </div>
 
-                {displayProfile.goal.value && (
-                  <div className="relative max-h-44 overflow-hidden rounded-[18px] border border-accent-indigo/24 bg-[linear-gradient(180deg,rgba(10,12,16,0.92),rgba(13,15,20,0.92))] px-5 py-5 shadow-[inset_3px_0_0_0_rgba(99,102,241,0.92)]">
-                    <p className="text-[11px] font-semibold tracking-[0.22em] text-white/68 uppercase">Objetivo principal</p>
-                    <p className="mt-4 text-base leading-8 text-white/82">{displayProfile.goal.value}</p>
-                    {displayProfile.goal.value.length > EXPAND_THRESHOLD && (
-                      <>
-                        <CardFade />
-                        <CardExpandButton onClick={() => onOpenCardModal('Objetivo principal', displayProfile.goal.value)} />
-                      </>
-                    )}
+          {/* Resumo do projeto */}
+          <DashboardSection id="read-overview" title="Resumo do projeto" subtitle="Visão editorial com contexto, objetivo e escopo em um formato mais direto." badge={<EditBadge sectionId="edit-context" />}>
+            <div>
+              {/* Resumo */}
+              <div className="pb-5">
+                <p className="mb-2 text-[10px] font-semibold tracking-[0.18em] text-white/28 uppercase">Resumo</p>
+                {displayProfile.summary.value ? (
+                  <h2 className="text-2xl font-semibold tracking-tight text-white/94">
+                    {displayProfile.summary.value}
+                  </h2>
+                ) : (
+                  <p className="text-sm italic text-white/22">Não preenchido</p>
+                )}
+              </div>
+
+              <div className="border-t border-white/6" />
+
+              {/* Escopo */}
+              <div className="py-5">
+                <p className="mb-2 text-[10px] font-semibold tracking-[0.18em] text-white/28 uppercase">Escopo</p>
+                {displayProfile.scope.value ? (
+                  <ClampedText
+                    value={displayProfile.scope.value}
+                    label="Escopo"
+                    onExpand={onToggleExpandField}
+                    expanded={Boolean(expandedFields.Escopo)}
+                    rows={3}
+                  />
+                ) : (
+                  <p className="text-sm italic text-white/22">Não preenchido</p>
+                )}
+              </div>
+
+              <div className="border-t border-white/6" />
+
+              {/* Objetivo principal */}
+              <div className="py-5">
+                <p className="mb-2 text-[10px] font-semibold tracking-[0.18em] text-white/28 uppercase">Objetivo principal</p>
+                {displayProfile.goal.value ? (
+                  <div className="relative overflow-hidden rounded-[18px] border border-accent-indigo/24 bg-[linear-gradient(180deg,rgba(10,12,16,0.92),rgba(13,15,20,0.92))] px-5 py-5 shadow-[inset_3px_0_0_0_rgba(99,102,241,0.92)]">
+                    <p className="text-base leading-8 text-white/82">{displayProfile.goal.value}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm italic text-white/22">Não preenchido</p>
+                )}
+              </div>
+
+              <div className="border-t border-white/6" />
+
+              {/* Contexto do produto e do time */}
+              <div className="pt-5">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <ExpandableInfoCard
+                    title="Contexto do produto"
+                    value={displayProfile.productContext.value}
+                    onExpand={onOpenCardModal}
+                    accent="sky"
+                  />
+                  <ExpandableInfoCard
+                    title="Contexto do time"
+                    value={displayProfile.teamContext.value}
+                    onExpand={onOpenCardModal}
+                    accent="emerald"
+                  />
+                </div>
+                {canEditProject && overviewEmpty && (
+                  <div className="mt-4">
+                    <EmptyCta label="Adicionar contexto e objetivo" onClick={onStartEditing} />
                   </div>
                 )}
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  {displayProfile.productContext.value && (
-                    <ExpandableInfoCard
-                      title="Contexto do produto"
-                      value={displayProfile.productContext.value}
-                      onExpand={onOpenCardModal}
-                    />
-                  )}
-                  {displayProfile.teamContext.value && (
-                    <ExpandableInfoCard
-                      title="Contexto do time"
-                      value={displayProfile.teamContext.value}
-                      onExpand={onOpenCardModal}
-                    />
-                  )}
-                </div>
               </div>
-            ) : (
-              renderLockedEmptyState('Adicionar contexto e objetivo')
+            </div>
+          </DashboardSection>
+
+          {/* Arquitetura do sistema */}
+          <DashboardSection id="read-architecture" title="Arquitetura do sistema" subtitle="Blocos técnicos organizados por área para leitura rápida do desenho da solução." badge={<EditBadge sectionId="edit-architecture" />}>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {displayProfile.architectureSections.map((card) => (
+                <ExpandableInfoCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.description}
+                  onExpand={onOpenCardModal}
+                  accent={card.accent}
+                />
+              ))}
+            </div>
+            {canEditProject && displayProfile.architectureSections.every((c) => !c.description.trim()) && (
+              <div className="mt-4">
+                <EmptyCta label="Adicionar arquitetura do sistema" onClick={onStartEditing} />
+              </div>
             )}
           </DashboardSection>
 
-          <DashboardSection title="Arquitetura do sistema" subtitle="Blocos conceituais para comunicar a estrutura técnica do projeto.">
-            {hasArchitecture ? (
-              <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
-                {architectureCards.map((card) => (
-                  <article
-                    key={card.title}
-                    className="relative max-h-56 overflow-hidden rounded-[18px] border border-white/7 bg-[linear-gradient(180deg,rgba(10,12,16,0.88),rgba(18,20,28,0.74))] p-5 transition-[border-color,transform] duration-150 hover:-translate-y-0.5 hover:border-accent-indigo/18"
-                  >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-accent-indigo/18 bg-accent-indigo/10 text-accent-indigo/76">
-                      <ArchitectureIcon kind={card.icon} />
-                    </div>
-                    <h3 className="mt-5 text-lg font-semibold text-white/92">{card.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-white/52">{card.description}</p>
-                    {card.description.length > EXPAND_THRESHOLD && (
-                      <>
-                        <CardFade />
-                        <CardExpandButton onClick={() => onOpenCardModal(card.title, card.description)} />
-                      </>
-                    )}
-                  </article>
-                ))}
+          {/* Decisões técnicas e regras */}
+          <DashboardSection id="read-rules" title="Decisões técnicas e regras do projeto" subtitle="Regras do domínio, permissões e restrições apresentadas em cartões escaneáveis." badge={<EditBadge sectionId="edit-rules" />}>
+            <div className="grid gap-4 md:grid-cols-2">
+              {displayProfile.businessRuleSections.map((card) => (
+                <ExpandableInfoCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.description}
+                  onExpand={onOpenCardModal}
+                  accent={card.accent}
+                />
+              ))}
+            </div>
+            {canEditProject && displayProfile.businessRuleSections.every((c) => !c.description.trim()) && (
+              <div className="mt-4">
+                <EmptyCta label="Adicionar regras de negócio" onClick={onStartEditing} />
               </div>
-            ) : (
-              renderLockedEmptyState('Adicionar arquitetura e regras')
             )}
           </DashboardSection>
-
-          {(displayProfile.architectureSummary.value || displayProfile.businessRules.value) && (
-            <DashboardSection title="Operational Notes" subtitle="Campos centrais do projeto organizados para consulta rápida.">
-              <div className="grid gap-4 md:grid-cols-2">
-                {displayProfile.architectureSummary.value && (
-                  <ExpandableInfoCard
-                    title="Resumo da arquitetura"
-                    value={displayProfile.architectureSummary.value}
-                    onExpand={onOpenCardModal}
-                  />
-                )}
-                {displayProfile.businessRules.value && (
-                  <ExpandableInfoCard
-                    title="Regras de negócio"
-                    value={displayProfile.businessRules.value}
-                    onExpand={onOpenCardModal}
-                  />
-                )}
-              </div>
-            </DashboardSection>
-          )}
         </div>
 
+        {/* Right sidebar */}
         <div className="flex flex-col gap-5">
-          <DashboardSection title="Stack Principal">
-            {hasStack ? (
-              <div className="flex flex-wrap gap-2.5">
-                {displayProfile.mainStack.value.map((item) => (
-                  <StackBadge key={item} value={item} />
-                ))}
+
+          {/* Stack principal */}
+          <DashboardSection id="read-stack" title="Stack principal" subtitle="Tecnologias organizadas por categoria para leitura e filtros futuros." badge={<EditBadge sectionId="edit-stack" />}>
+            <div className="space-y-3.5">
+              {displayProfile.stackGroups.map((group) => (
+                <div key={group.key} className="rounded-2xl border border-white/7 bg-surface-base/58 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold tracking-[0.18em] text-white/74 uppercase">{group.title}</p>
+                      <p className="mt-1 text-xs text-white/34">{group.description}</p>
+                    </div>
+                    <span className="rounded-full border border-white/8 bg-white/4 px-2.5 py-1 text-[10px] font-semibold text-white/52">
+                      {group.items.length}
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    {group.items.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {group.items.map((item) => (
+                          <StackBadge key={`${group.key}-${item}`} value={item} />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs italic text-white/22">Nenhuma tecnologia adicionada</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {canEditProject && displayProfile.stackGroups.every((g) => g.items.length === 0) && (
+              <div className="mt-4">
+                <EmptyCta label="Adicionar stack por categoria" onClick={onStartEditing} />
               </div>
-            ) : (
-              renderLockedEmptyState('Adicionar stack')
             )}
           </DashboardSection>
 
-          <DashboardSection title="Links úteis" subtitle="Atalhos importantes para navegação rápida entre artefatos.">
-            {hasLinks ? (
-              <div className="flex flex-col gap-3">
-                {links.map((link) => (
-                  <LinkRow key={link.label} {...link} />
-                ))}
-              </div>
-            ) : (
-              renderLockedEmptyState('Adicionar links')
-            )}
+          {/* Links úteis */}
+          <DashboardSection id="read-links" title="Links úteis" subtitle="Atalhos importantes para navegação rápida entre artefatos." badge={<EditBadge sectionId="edit-links" />}>
+            <div className="flex flex-col gap-2">
+              {links.map((link) =>
+                link.url ? (
+                  <LinkRow key={link.label} label={link.label} url={link.url} />
+                ) : (
+                  <div
+                    key={link.label}
+                    className="flex items-center gap-3 rounded-2xl border border-white/5 bg-surface-base/40 px-4 py-3"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-card border border-white/6 bg-surface-base/58 text-white/16">
+                      <LinkTypeIcon type={LINK_ICON_MAP[link.label] ?? 'globe'} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-white/30">{link.label}</p>
+                      <p className="mt-0.5 text-[11px] italic text-white/22">Não preenchido</p>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
           </DashboardSection>
 
-          <DashboardSection title="Time de Desenvolvimento" subtitle="Pessoas diretamente envolvidas no contexto deste projeto.">
+          {/* Equipe do projeto */}
+          <DashboardSection id="read-team" title="Equipe do projeto" subtitle="Pessoas envolvidas no contexto e na operação deste projeto.">
             {canManageMembers && (
               <div className="mb-3 space-y-3 rounded-[14px] border border-accent-indigo/14 bg-accent-indigo/5 p-3.5">
                 <p className="text-[10px] font-semibold tracking-[0.18em] text-accent-indigo/70 uppercase">Adicionar membro</p>
 
-                {/* Email input with inline search button */}
                 <div className="relative">
                   <input
                     type="email"
@@ -228,7 +297,6 @@ export default function AboutReadContent({
                   </button>
                 </div>
 
-                {/* Role segmented control */}
                 <div className="grid grid-cols-3 gap-0.5 rounded-lg border border-white/8 bg-surface-base/60 p-0.5">
                   {roleOptions.map((role) => (
                     <button
@@ -242,12 +310,11 @@ export default function AboutReadContent({
                           : 'text-white/32 hover:text-white/60',
                       ].join(' ')}
                     >
-                      {role === 'admin' ? 'Admin' : role === 'editor' ? 'Editor' : 'Viewer'}
+                      {formatMemberRole(role)}
                     </button>
                   ))}
                 </div>
 
-                {/* User lookup result */}
                 {memberLookup && (
                   <div className="flex items-center gap-2.5 rounded-card border border-white/8 bg-surface-base/74 px-3 py-2.5">
                     <div
@@ -275,7 +342,7 @@ export default function AboutReadContent({
 
             {!canManageMembers && (
               <div className="mb-3 rounded-card border border-white/7 bg-surface-base/60 px-3.5 py-2.5 text-xs leading-5 text-white/40">
-                Apenas admins podem adicionar, remover ou alterar o papel dos membros.
+                Apenas administradores podem adicionar, remover ou alterar o papel dos membros.
               </div>
             )}
 
@@ -305,16 +372,23 @@ export default function AboutReadContent({
                     </div>
                     {canManageMembers ? (
                       <div className="flex shrink-0 items-center gap-1.5">
-                        <select
-                          value={member.role}
-                          onChange={(e) => onUpdateMemberRole(member.id, e.target.value as ProjectMemberRole)}
-                          disabled={memberMutationLoading === member.id}
-                          className="rounded-lg border border-white/10 bg-surface-base/70 px-2 py-1.5 text-[10px] font-medium text-white/60 outline-none transition-opacity disabled:opacity-45"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="editor">Editor</option>
-                          <option value="viewer">Viewer</option>
-                        </select>
+                        <div className="relative">
+                          <select
+                            value={member.role}
+                            onChange={(e) => onUpdateMemberRole(member.id, e.target.value as ProjectMemberRole)}
+                            disabled={memberMutationLoading === member.id}
+                            className="appearance-none rounded-lg border border-white/10 bg-surface-base py-1.5 pl-2 pr-6 text-[10px] font-medium text-white/60 outline-none transition-opacity disabled:opacity-45"
+                          >
+                            <option value="admin">Administrador</option>
+                            <option value="editor">Editor</option>
+                            <option value="viewer">Visualizador</option>
+                          </select>
+                          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-white/28">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                              <path d="M1 2.5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={() => onRemoveMember(member.id)}
@@ -336,7 +410,7 @@ export default function AboutReadContent({
                             : 'border-white/8 text-white/32',
                         ].join(' ')}
                       >
-                        {member.role === 'admin' ? 'Admin' : member.role === 'editor' ? 'Editor' : 'Viewer'}
+                        {formatMemberRole(member.role)}
                       </span>
                     )}
                   </div>

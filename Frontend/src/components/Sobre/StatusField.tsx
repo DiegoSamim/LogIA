@@ -66,7 +66,7 @@ export default function StatusField({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-[16px] border border-white/8 bg-[linear-gradient(180deg,rgba(19,22,30,0.98),rgba(13,15,20,0.98))] shadow-[0_18px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+        <div className="mt-2 overflow-hidden rounded-[16px] border border-white/8 bg-[linear-gradient(180deg,rgba(19,22,30,0.98),rgba(13,15,20,0.98))] shadow-[0_18px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl">
           <div className="p-2">
             {options.map((option) => {
               const selected = option.value === value

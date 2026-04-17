@@ -2,12 +2,12 @@ import type { LinkType } from '@/types/sobre'
 import { LinkTypeIcon } from './icons'
 
 const LINK_ICON_MAP: Record<string, LinkType> = {
-  'GitHub Repository': 'github',
-  'Product Documentation': 'book',
-  'Figma Design File': 'figma',
-  'Project Board': 'grid',
-  'API Base URL': 'terminal',
-  'Deployment URL': 'globe',
+  Repositório: 'github',
+  Documentação: 'book',
+  Figma: 'figma',
+  'Quadro do projeto': 'grid',
+  'Base da API': 'terminal',
+  'Ambiente publicado': 'globe',
 }
 
 export default function LinkRow({ label, url }: { label: string; url: string }) {

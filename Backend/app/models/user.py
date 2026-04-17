@@ -38,6 +38,9 @@ class User(Base, TimestampMixin):
     task_attachments: Mapped[list["TaskAttachment"]] = relationship(  # type: ignore[name-defined]
         foreign_keys="TaskAttachment.uploaded_by", back_populates="uploader", cascade="all, delete-orphan"
     )
+    project_attachments: Mapped[list["ProjectAttachment"]] = relationship(  # type: ignore[name-defined]
+        foreign_keys="ProjectAttachment.uploaded_by", back_populates="uploader", cascade="all, delete-orphan"
+    )
     chat_sessions: Mapped[list["ChatSession"]] = relationship(  # type: ignore[name-defined]
         back_populates="user", cascade="all, delete-orphan"
     )

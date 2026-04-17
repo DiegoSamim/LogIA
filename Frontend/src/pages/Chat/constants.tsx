@@ -303,6 +303,12 @@ export const CREATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
     placeholder: 'Ex: Implementar endpoint, Escrever testes, Revisar PR...',
     inputType: 'checklist',
   },
+  {
+    field: 'hours_worked',
+    question: 'Quantas horas foram trabalhadas nessa tarefa?',
+    placeholder: 'Ex: 2.5 (em horas)',
+    inputType: 'text',
+  },
 ]
 
 export const UPDATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
@@ -356,5 +362,11 @@ export const UPDATE_TASK_QUESTIONS: TaskRegisterQuestion[] = [
     question: 'Quais stacks, tecnologias ou ferramentas foram usadas ou revisadas nesta atualização?',
     placeholder: 'Selecione no componente ou digite stacks e ferramentas manualmente...',
     inputType: 'tags',
+  },
+  {
+    field: 'hours_worked',
+    question: 'Quantas horas adicionais foram trabalhadas nessa atualização?',
+    placeholder: 'Ex: 1.5 (em horas)',
+    inputType: 'text',
   },
 ]

@@ -1,6 +1,7 @@
 import api from './api'
 import type {
   CreateCheckpointsBatchRequest,
+  CreateTaskCheckpointRequest,
   CreateTaskRequest,
   CreateTaskUpdateRequest,
   TaskAttachmentDTO,
@@ -24,6 +25,8 @@ export const taskService = {
     api.post<TaskUpdateDTO>(`/tasks/${taskId}/updates`, data),
   listCheckpoints: (taskId: string) =>
     api.get<TaskCheckpointDTO[]>(`/tasks/${taskId}/checkpoints`),
+  createCheckpoint: (taskId: string, data: CreateTaskCheckpointRequest) =>
+    api.post<TaskCheckpointDTO>(`/tasks/${taskId}/checkpoints`, data),
   toggleCheckpoint: (taskId: string, checkpointId: string, is_done: boolean) =>
     api.patch<TaskCheckpointDTO>(`/tasks/${taskId}/checkpoints/${checkpointId}`, { is_done }),
   createCheckpoints: (taskId: string, items: ChecklistItem[]) => {

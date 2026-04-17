@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +33,9 @@ class Project(Base, TimestampMixin):
     tasks: Mapped[list["Task"]] = relationship(  # type: ignore[name-defined]
         back_populates="project", cascade="all, delete-orphan"
     )
+    attachments: Mapped[list["ProjectAttachment"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
     chat_sessions: Mapped[list["ChatSession"]] = relationship(  # type: ignore[name-defined]
         back_populates="project", cascade="all, delete-orphan"
     )
@@ -59,9 +62,33 @@ class ProjectProfile(Base):
     main_stack: Mapped[list[str]] = mapped_column(
         ARRAY(Text), server_default="{}", default=list
     )
+    frontend_stack: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), server_default="{}", default=list
+    )
+    backend_stack: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), server_default="{}", default=list
+    )
+    infra_stack: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), server_default="{}", default=list
+    )
+    database_stack: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), server_default="{}", default=list
+    )
+    other_stack: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), server_default="{}", default=list
+    )
     architecture_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    architecture_frontend: Mapped[str | None] = mapped_column(Text, nullable=True)
+    architecture_backend: Mapped[str | None] = mapped_column(Text, nullable=True)
+    architecture_integrations: Mapped[str | None] = mapped_column(Text, nullable=True)
+    architecture_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    architecture_infra: Mapped[str | None] = mapped_column(Text, nullable=True)
     product_context: Mapped[str | None] = mapped_column(Text, nullable=True)
     business_rules: Mapped[str | None] = mapped_column(Text, nullable=True)
+    business_rules_core: Mapped[str | None] = mapped_column(Text, nullable=True)
+    business_rules_permissions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    business_rules_validations: Mapped[str | None] = mapped_column(Text, nullable=True)
+    business_rules_constraints: Mapped[str | None] = mapped_column(Text, nullable=True)
     team_context: Mapped[str | None] = mapped_column(Text, nullable=True)
     default_language: Mapped[str | None] = mapped_column(String(50), nullable=True)
     documentation_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -74,3 +101,30 @@ class ProjectProfile(Base):
     )
 
     project: Mapped["Project"] = relationship(back_populates="profile")
+
+
+class ProjectAttachment(Base):
+    __tablename__ = "project_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    uploaded_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    file_name: Mapped[str] = mapped_column(Text)
+    file_url: Mapped[str] = mapped_column(Text)
+    file_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    project: Mapped["Project"] = relationship(back_populates="attachments")
+    uploader: Mapped["User"] = relationship(  # type: ignore[name-defined]
+        foreign_keys=[uploaded_by], back_populates="project_attachments"
+    )

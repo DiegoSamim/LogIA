@@ -64,10 +64,12 @@ export default function AttachmentUploadStep({
   taskId,
   onComplete,
   onSkip,
+  uploadFn,
 }: {
   taskId: string
   onComplete: () => void
   onSkip: () => void
+  uploadFn?: (file: File) => Promise<{ data: { file_url: string } }>
 }) {
   const [files, setFiles] = useState<AttachmentUploadState[]>([])
   const [isDragging, setIsDragging] = useState(false)
@@ -78,7 +80,7 @@ export default function AttachmentUploadStep({
       prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading' } : f))
     )
     try {
-      const { data } = await taskService.uploadAttachment(taskId, entry.file)
+      const { data } = await (uploadFn ? uploadFn(entry.file) : taskService.uploadAttachment(taskId, entry.file))
       setFiles((prev) =>
         prev.map((f) => (f.id === entry.id ? { ...f, status: 'done', url: data.file_url } : f))
       )

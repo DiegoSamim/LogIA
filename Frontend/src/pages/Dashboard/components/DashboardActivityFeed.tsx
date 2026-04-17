@@ -1,20 +1,13 @@
-import Timeline from '@mui/lab/Timeline'
-import TimelineItem from '@mui/lab/TimelineItem'
-import TimelineSeparator from '@mui/lab/TimelineSeparator'
-import TimelineConnector from '@mui/lab/TimelineConnector'
-import TimelineContent from '@mui/lab/TimelineContent'
-import TimelineDot from '@mui/lab/TimelineDot'
-import TimelineOppositeContent, { timelineOppositeContentClasses } from '@mui/lab/TimelineOppositeContent'
 import type { TaskDTO } from '@/data/dtos'
 import { CATEGORY_CHIP_OPTIONS } from '@/pages/Chat/constants'
 import { formatRelativeDate } from '@/components/Tasks/utils'
 
 const STATUS_DOT_COLORS: Record<string, string> = {
-  done: '#6ee7b7',       // emerald-300
-  in_progress: '#a5b4fc', // indigo-300
-  blocked: '#fdba74',    // orange-300
-  todo: '#94a3b8',       // slate-400
-  cancelled: '#fda4af',  // rose-300
+  done: '#6ee7b7',
+  in_progress: '#a5b4fc',
+  blocked: '#fdba74',
+  todo: '#94a3b8',
+  cancelled: '#fda4af',
 }
 
 export default function DashboardActivityFeed({ tasks }: { tasks: TaskDTO[] }) {
@@ -28,44 +21,33 @@ export default function DashboardActivityFeed({ tasks }: { tasks: TaskDTO[] }) {
   }
 
   return (
-    <Timeline
-      sx={{
-        [`& .${timelineOppositeContentClasses.root}`]: { flex: 0.28, px: 0 },
-        p: 0,
-        m: 0,
-      }}
-    >
+    <div>
       {tasks.map((task, idx) => {
         const categoryOption = CATEGORY_CHIP_OPTIONS.find((o) => o.value === task.category)
         const dotColor = STATUS_DOT_COLORS[task.status] ?? '#94a3b8'
         const isLast = idx === tasks.length - 1
 
         return (
-          <TimelineItem key={task.id}>
-            <TimelineOppositeContent sx={{ py: '10px', px: 0, pr: 1.5 }}>
-              <span className="text-[10px] text-white/28 tabular-nums leading-none">
+          <div key={task.id} className="flex gap-3">
+            {/* Date */}
+            <div className="w-18 shrink-0 pt-2.25 text-right">
+              <span className="text-[10px] leading-none tabular-nums text-white/28">
                 {formatRelativeDate(task.updated_at)}
               </span>
-            </TimelineOppositeContent>
+            </div>
 
-            <TimelineSeparator>
-              <TimelineDot
-                sx={{
-                  bgcolor: dotColor,
-                  boxShadow: `0 0 0 4px ${dotColor}22`,
-                  width: 8,
-                  height: 8,
-                  margin: '10px 0',
-                  border: 'none',
-                }}
+            {/* Dot + connector */}
+            <div className="flex shrink-0 flex-col items-center">
+              <div
+                className="mt-2.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: dotColor, boxShadow: `0 0 0 3px ${dotColor}22` }}
               />
-              {!isLast && (
-                <TimelineConnector sx={{ bgcolor: 'rgba(255,255,255,0.07)', width: '1px' }} />
-              )}
-            </TimelineSeparator>
+              {!isLast && <div className="w-px flex-1 bg-white/7 mt-1" />}
+            </div>
 
-            <TimelineContent sx={{ py: '6px', px: 0, pl: 1.5, pb: isLast ? 0 : '14px' }}>
-              <p className="text-sm font-medium leading-snug text-white/82 line-clamp-1">
+            {/* Content */}
+            <div className={`min-w-0 flex-1 pt-1.5 ${isLast ? '' : 'pb-4'}`}>
+              <p className="text-sm font-medium leading-snug text-white/82 break-words whitespace-normal">
                 {task.title}
               </p>
               {categoryOption && (
@@ -75,10 +57,10 @@ export default function DashboardActivityFeed({ tasks }: { tasks: TaskDTO[] }) {
                   {categoryOption.label}
                 </span>
               )}
-            </TimelineContent>
-          </TimelineItem>
+            </div>
+          </div>
         )
       })}
-    </Timeline>
+    </div>
   )
 }

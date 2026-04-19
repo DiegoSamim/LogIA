@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.db.engine import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -9,6 +10,7 @@ from app.schemas.user import UserResponse
 from app.services import auth_service
 
 router = APIRouter()
+settings = get_settings()
 
 REFRESH_COOKIE = "refresh_token"
 COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days in seconds
@@ -20,7 +22,7 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         value=token,
         httponly=True,
         samesite="lax",
-        secure=False,  # True in production (HTTPS)
+        secure=settings.APP_ENV == "production",
         max_age=COOKIE_MAX_AGE,
         path="/api/v1/auth",
     )

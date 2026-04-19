@@ -28,7 +28,7 @@ warn(){ echo -e "${YELLOW}[dev]${RESET} $*"; }
 sudo service ssh start 2>/dev/null || true
 WSL_IP=$(hostname -I | awk '{print $1}')
 powershell.exe -Command "netsh interface portproxy set v4tov4 listenport=2222 listenaddress=0.0.0.0 connectport=22 connectaddress=$WSL_IP" 2>/dev/null || true
-ok "SSH ativo — conecte via Termius em 192.168.1.3:2222"
+ok "SSH ativo — WSL IP: $WSL_IP (porta 2222 → Windows)"
 
 # ── 1. sobe o banco ─────────────────────────────────────────────────────
 log "Subindo container do banco de dados..."

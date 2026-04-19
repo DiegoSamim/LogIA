@@ -1,5 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import Popover from '@mui/material/Popover'
+import Tooltip from '@mui/material/Tooltip'
 import icon from '@/assets/Icon.png'
 import { chatService } from '@/services/chat.service'
 import { useAppStore } from '@/store/useAppStore'
@@ -126,7 +132,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const sessionsByProject = useQuerySessionsStore((state) => state.sessionsByProject)
   const setProjectSessions = useQuerySessionsStore((state) => state.setProjectSessions)
   const setActiveSession = useQuerySessionsStore((state) => state.setActiveSession)
+  const upsertSession = useQuerySessionsStore((state) => state.upsertSession)
+  const removeSession = useQuerySessionsStore((state) => state.removeSession)
   const resetProjectQuery = useQuerySessionsStore((state) => state.resetProjectQuery)
+
+  const [menuAnchor, setMenuAnchor] = useState<{ el: HTMLButtonElement; session: ChatSessionDTO } | null>(null)
+  const [renameSession, setRenameSession] = useState<ChatSessionDTO | null>(null)
+  const [renameTitle, setRenameTitle] = useState('')
+  const [renameLoading, setRenameLoading] = useState(false)
+  const [deleteSession, setDeleteSession] = useState<ChatSessionDTO | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const renameInputRef = useRef<HTMLInputElement>(null)
 
   const activeSessionId = currentProject ? activeSessionIdByProject[currentProject.id] ?? null : null
   const querySessions = currentProject ? sessionsByProject[currentProject.id] ?? EMPTY_QUERY_SESSIONS : EMPTY_QUERY_SESSIONS
@@ -157,7 +173,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     setMode('query')
     setActiveSession(currentProject.id, session.id)
     navigate('/chat')
-    onClose()
   }
 
   function handleNewSessionClick() {
@@ -166,7 +181,57 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }
 
+  function openMenu(e: React.MouseEvent<HTMLButtonElement>, session: ChatSessionDTO) {
+    e.stopPropagation()
+    setMenuAnchor({ el: e.currentTarget, session })
+  }
+
+  function closeMenu() {
+    setMenuAnchor(null)
+  }
+
+  function openRename(session: ChatSessionDTO) {
+    closeMenu()
+    setRenameSession(session)
+    setRenameTitle(session.title ?? '')
+    setTimeout(() => renameInputRef.current?.focus(), 50)
+  }
+
+  function openDelete(session: ChatSessionDTO) {
+    closeMenu()
+    setDeleteSession(session)
+  }
+
+  async function handleRename() {
+    if (!renameSession || !currentProject) return
+    setRenameLoading(true)
+    try {
+      const { data } = await chatService.updateSession(renameSession.id, { title: renameTitle.trim() || null })
+      upsertSession(currentProject.id, data)
+      setRenameSession(null)
+    } catch {
+      // falha silenciosa — o usuário pode tentar novamente
+    } finally {
+      setRenameLoading(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteSession || !currentProject) return
+    setDeleteLoading(true)
+    try {
+      await chatService.deleteSession(deleteSession.id)
+      removeSession(currentProject.id, deleteSession.id)
+      setDeleteSession(null)
+    } catch {
+      // falha silenciosa
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   return (
+    <>
     <aside
       className={[
         'fixed inset-y-0 left-0 z-30 flex w-[196px] flex-col border-r border-white/[0.06] bg-surface-low transition-transform duration-200',
@@ -258,12 +323,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   const isActive = activeSessionId === session.id && pathname === '/chat'
 
                   return (
-                    <button
+                    <div
                       key={session.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleOpenQuerySession(session)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleOpenQuerySession(session)}
                       className={[
-                        'w-full rounded-xl border px-3 py-3 text-left transition-[border-color,background-color,transform] duration-150 hover:-translate-y-0.5',
+                        'group relative w-full cursor-pointer rounded-xl border px-3 py-3 text-left transition-[border-color,background-color,transform] duration-150 hover:-translate-y-0.5',
                         isActive
                           ? 'border-accent-indigo/30 bg-accent-indigo/10'
                           : statusView.cardClass,
@@ -272,9 +339,28 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <div className="flex items-start gap-2">
                         <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${statusView.dotClass}`} />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[12px] font-semibold text-white/86">
-                            {session.title ?? 'Consulta sem título'}
-                          </p>
+                          <Tooltip
+                            title={session.title ?? 'Consulta sem título'}
+                            placement="right"
+                            arrow
+                            slotProps={{
+                              tooltip: {
+                                sx: {
+                                  bgcolor: '#1A1D26',
+                                  border: '1px solid rgba(255,255,255,0.08)',
+                                  borderRadius: '8px',
+                                  fontSize: '0.6875rem',
+                                  color: 'rgba(255,255,255,0.82)',
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                                },
+                              },
+                              arrow: { sx: { color: '#1A1D26' } },
+                            }}
+                          >
+                            <p className="truncate text-[12px] font-semibold text-white/86 pr-6">
+                              {session.title ?? 'Consulta sem título'}
+                            </p>
+                          </Tooltip>
                           <div className="mt-1 flex items-center gap-2">
                             <span className={`text-[10px] font-medium ${statusView.textClass}`}>
                               {statusView.label}
@@ -286,7 +372,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           </div>
                         </div>
                       </div>
-                    </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => openMenu(e, session)}
+                        aria-label="Opções da sessão"
+                        className="absolute right-2 top-2.5 flex h-5 w-5 items-center justify-center rounded-[6px] text-white/0 opacity-0 transition-[opacity,color,background-color] duration-150 group-hover:text-white/40 group-hover:opacity-100 hover:!text-white/72 hover:bg-white/8"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                          <circle cx="8" cy="3" r="1.4" />
+                          <circle cx="8" cy="8" r="1.4" />
+                          <circle cx="8" cy="13" r="1.4" />
+                        </svg>
+                      </button>
+                    </div>
                   )
                 })
               )}
@@ -309,5 +408,150 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </Link>
       </div>
     </aside>
+
+    {/* ── Popover de opções ─────────────────────────────── */}
+    <Popover
+      open={Boolean(menuAnchor)}
+      anchorEl={menuAnchor?.el}
+      onClose={closeMenu}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      slotProps={{
+        paper: {
+          sx: {
+            bgcolor: '#13161E',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '10px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            minWidth: 148,
+            p: 0.5,
+          },
+        },
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => menuAnchor && openRename(menuAnchor.session)}
+        className="flex w-full items-center gap-2.5 rounded-[7px] px-3 py-2 text-left text-[12px] text-white/72 transition-colors duration-100 hover:bg-white/6 hover:text-white/90"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+        Renomear
+      </button>
+      <button
+        type="button"
+        onClick={() => menuAnchor && openDelete(menuAnchor.session)}
+        className="flex w-full items-center gap-2.5 rounded-[7px] px-3 py-2 text-left text-[12px] text-rose-300/80 transition-colors duration-100 hover:bg-rose-400/8 hover:text-rose-200"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          <path d="M10 11v6M14 11v6" />
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+        </svg>
+        Excluir
+      </button>
+    </Popover>
+
+    {/* ── Dialog: Renomear ──────────────────────────────── */}
+    <Dialog
+      open={Boolean(renameSession)}
+      onClose={() => !renameLoading && setRenameSession(null)}
+      slotProps={{
+        paper: {
+          sx: {
+            bgcolor: '#13161E',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '16px',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+            minWidth: 340,
+          },
+        },
+      }}
+    >
+      <DialogTitle sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.9375rem', fontWeight: 600, pb: 1 }}>
+        Renomear sessão
+      </DialogTitle>
+      <DialogContent sx={{ pt: '8px !important' }}>
+        <input
+          ref={renameInputRef}
+          type="text"
+          value={renameTitle}
+          onChange={(e) => setRenameTitle(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !renameLoading) void handleRename() }}
+          placeholder="Nome da sessão"
+          className="w-full rounded-[10px] border border-white/8 bg-surface-high px-3.5 py-2.5 text-sm text-white/88 placeholder:text-white/28 outline-none transition-[border-color,box-shadow] duration-150 focus:border-accent-indigo/40 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
+        />
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+        <button
+          type="button"
+          onClick={() => setRenameSession(null)}
+          disabled={renameLoading}
+          className="rounded-[8px] border border-white/8 bg-transparent px-4 py-2 text-[12px] font-medium text-white/50 transition-colors duration-150 hover:border-white/14 hover:text-white/72 disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={() => { void handleRename() }}
+          disabled={renameLoading}
+          className="rounded-[8px] bg-accent-indigo/90 px-4 py-2 text-[12px] font-semibold text-white transition-[filter,opacity] duration-150 hover:brightness-110 disabled:opacity-50"
+        >
+          {renameLoading ? 'Salvando...' : 'Salvar'}
+        </button>
+      </DialogActions>
+    </Dialog>
+
+    {/* ── Dialog: Excluir ───────────────────────────────── */}
+    <Dialog
+      open={Boolean(deleteSession)}
+      onClose={() => !deleteLoading && setDeleteSession(null)}
+      slotProps={{
+        paper: {
+          sx: {
+            bgcolor: '#13161E',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '16px',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+            minWidth: 340,
+          },
+        },
+      }}
+    >
+      <DialogTitle sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.9375rem', fontWeight: 600, pb: 1 }}>
+        Excluir sessão
+      </DialogTitle>
+      <DialogContent>
+        <p className="text-[13px] leading-6 text-white/54">
+          Tem certeza que deseja excluir{' '}
+          <span className="font-medium text-white/80">
+            &ldquo;{deleteSession?.title ?? 'esta sessão'}&rdquo;
+          </span>
+          ? Esta ação não pode ser desfeita.
+        </p>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+        <button
+          type="button"
+          onClick={() => setDeleteSession(null)}
+          disabled={deleteLoading}
+          className="rounded-[8px] border border-white/8 bg-transparent px-4 py-2 text-[12px] font-medium text-white/50 transition-colors duration-150 hover:border-white/14 hover:text-white/72 disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={() => { void handleDelete() }}
+          disabled={deleteLoading}
+          className="rounded-[8px] border border-rose-400/20 bg-rose-400/10 px-4 py-2 text-[12px] font-semibold text-rose-200 transition-[border-color,background-color,opacity] duration-150 hover:border-rose-300/36 hover:bg-rose-400/18 disabled:opacity-50"
+        >
+          {deleteLoading ? 'Excluindo...' : 'Excluir'}
+        </button>
+      </DialogActions>
+    </Dialog>
+    </>
   )
 }

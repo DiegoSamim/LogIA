@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
 import type { ChatMessageDTO, ChatSessionDTO, QueryRunStatus } from '@/data/dtos'
 import { QUERY_FIXED_QUESTIONS, QUERY_PANEL_SECTIONS } from '@/pages/Chat/constants'
 import type { RegularChatFlowProps, SidePanelSection } from '@/pages/Chat/types'
@@ -314,30 +316,6 @@ export default function RegularChatFlow({
   return (
     <>
       <section className="chat-card-enter relative flex h-full min-h-0 flex-1 flex-col rounded-[5px] border border-white/7 bg-[linear-gradient(180deg,rgba(19,22,30,0.88),rgba(13,15,20,0.88))] backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-4 border-b border-white/6 px-4 py-4 sm:px-5">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold tracking-[0.18em] text-white/28 uppercase">Modo consulta</p>
-            <h2 className="mt-1 truncate text-[16px] font-semibold text-white/90">
-              {activeSession?.title ?? 'Nova consulta'}
-            </h2>
-            <p className="mt-1 text-[12px] text-white/38">
-              {activeSession
-                ? `${conversationItems.length} mensagens · ${getRunLabel(activeRun?.status ?? null)}`
-                : 'Escolha uma pergunta fixa para abrir uma nova sessão persistida.'}
-            </p>
-          </div>
-
-          {activeRunBusy ? (
-            <button
-              type="button"
-              onClick={() => { void handleCancelRun() }}
-              className="shrink-0 rounded-[12px] border border-rose-400/20 bg-rose-400/8 px-3.5 py-2 text-[11px] font-semibold tracking-[0.12em] text-rose-200 uppercase transition-[border-color,background-color,color] duration-150 hover:border-rose-300/36 hover:bg-rose-400/14"
-            >
-              Parar
-            </button>
-          ) : null}
-        </div>
-
         <div ref={scrollRef} className="chat-scroll flex-1 min-h-0 space-y-6 overflow-y-auto px-4 py-5 sm:px-5">
           {loadingSessions ? (
             <div className="rounded-[22px] border border-white/8 bg-surface-container/72 px-5 py-5 text-sm text-white/48">
@@ -377,35 +355,84 @@ export default function RegularChatFlow({
               ) : null}
 
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                <label className="flex min-w-0 flex-col gap-2">
+                <div className="flex min-w-0 flex-col gap-2">
                   <span className="text-[10px] font-semibold tracking-[0.18em] text-white/28 uppercase">Pergunta fixa</span>
-                  <select
+                  <Select
                     value={selectedQuestionKey}
-                    onChange={(event) => setSelectedQuestionKey(event.target.value)}
+                    onChange={(e) => setSelectedQuestionKey(e.target.value)}
                     disabled={activeRunBusy || submitting}
-                    className="h-12 rounded-[18px] border border-white/8 bg-surface-base/88 px-4 text-sm text-white/88 outline-none transition-[border-color,box-shadow] duration-150 focus:border-accent-indigo/38 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
+                    size="small"
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          bgcolor: '#13161E',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '14px',
+                          mt: 0.5,
+                          '& .MuiMenuItem-root': {
+                            fontSize: '0.8125rem',
+                            color: 'rgba(255,255,255,0.78)',
+                            borderRadius: '8px',
+                            mx: 0.5,
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                            '&.Mui-selected': { bgcolor: 'rgba(99,102,241,0.14)', color: 'rgba(255,255,255,0.92)' },
+                            '&.Mui-selected:hover': { bgcolor: 'rgba(99,102,241,0.2)' },
+                          },
+                        },
+                      },
+                    }}
+                    sx={{
+                      height: 48,
+                      borderRadius: '18px',
+                      color: 'rgba(255,255,255,0.88)',
+                      fontSize: '0.875rem',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '18px',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        border: '1px solid rgba(255,255,255,0.16)',
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        border: '1px solid rgba(99,102,241,0.38)',
+                        boxShadow: '0 0 0 3px rgba(99,102,241,0.12)',
+                      },
+                      '&.Mui-disabled': { opacity: 0.6, cursor: 'not-allowed' },
+                      '& .MuiSelect-icon': { color: 'rgba(255,255,255,0.32)' },
+                      bgcolor: 'rgba(13,15,20,0.88)',
+                    }}
                   >
                     {QUERY_FIXED_QUESTIONS.map((question) => (
-                      <option key={question.key} value={question.key}>
+                      <MenuItem key={question.key} value={question.key}>
                         {question.label}
-                      </option>
+                      </MenuItem>
                     ))}
-                  </select>
-                </label>
+                  </Select>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => { void handleSubmitQuestion() }}
-                  disabled={submitting || activeRunBusy}
-                  className="h-12 shrink-0 rounded-[18px] bg-linear-to-r from-accent-indigo to-accent-violet px-5 text-xs font-semibold tracking-[0.18em] text-white uppercase transition-[filter,transform,opacity] duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
-                >
-                  {submitting ? 'Enviando...' : 'Perguntar'}
-                </button>
+                <div className="flex shrink-0 flex-col gap-2">
+                  <span className="text-[10px] font-semibold tracking-[0.18em] text-transparent uppercase select-none">_</span>
+                  <div className="flex gap-2">
+                    {activeRunBusy && (
+                      <button
+                        type="button"
+                        onClick={() => { void handleCancelRun() }}
+                        className="h-12 rounded-[18px] border border-rose-400/20 bg-rose-400/8 px-4 text-[11px] font-semibold tracking-[0.12em] text-rose-200 uppercase transition-[border-color,background-color,color] duration-150 hover:border-rose-300/36 hover:bg-rose-400/14"
+                      >
+                        Parar
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { void handleSubmitQuestion() }}
+                      disabled={submitting || activeRunBusy}
+                      className="h-12 rounded-[18px] bg-linear-to-r from-accent-indigo to-accent-violet px-5 text-xs font-semibold tracking-[0.18em] text-white uppercase transition-[filter,transform,opacity] duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      {submitting ? 'Enviando...' : 'Perguntar'}
+                    </button>
+                  </div>
+                </div>
               </div>
-
-              <p className="px-1 text-[11px] leading-5 text-white/34">
-                {QUERY_FIXED_QUESTIONS.find((item) => item.key === selectedQuestionKey)?.helper}
-              </p>
             </div>
           </div>
         </div>

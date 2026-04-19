@@ -6,6 +6,7 @@ type QuerySyncEvent =
   | { type: 'set_active_session'; projectId: string; sessionId: string | null }
   | { type: 'set_project_sessions'; projectId: string; sessions: ChatSessionDTO[] }
   | { type: 'upsert_session'; projectId: string; session: ChatSessionDTO }
+  | { type: 'remove_session'; projectId: string; sessionId: string }
   | { type: 'set_session_messages'; sessionId: string; messages: ChatMessageDTO[] }
   | { type: 'append_session_messages'; sessionId: string; messages: ChatMessageDTO[] }
   | { type: 'set_session_run'; sessionId: string; run: QueryRunDTO | null }
@@ -23,6 +24,7 @@ interface QuerySessionsState {
   setActiveSession: (projectId: string, sessionId: string | null, options?: QueryStoreOptions) => void
   setProjectSessions: (projectId: string, sessions: ChatSessionDTO[], options?: QueryStoreOptions) => void
   upsertSession: (projectId: string, session: ChatSessionDTO, options?: QueryStoreOptions) => void
+  removeSession: (projectId: string, sessionId: string, options?: QueryStoreOptions) => void
   setSessionMessages: (sessionId: string, messages: ChatMessageDTO[], options?: QueryStoreOptions) => void
   appendSessionMessages: (sessionId: string, messages: ChatMessageDTO[], options?: QueryStoreOptions) => void
   setSessionRun: (sessionId: string, run: QueryRunDTO | null, options?: QueryStoreOptions) => void
@@ -151,6 +153,25 @@ export const useQuerySessionsStore = create<QuerySessionsState>()(
           broadcast({ type: 'upsert_session', projectId, session })
         }
       },
+      removeSession: (projectId, sessionId, options) => {
+        set((state) => {
+          const existing = state.sessionsByProject[projectId] ?? []
+          const activeId = state.activeSessionIdByProject[projectId] ?? null
+          return {
+            sessionsByProject: {
+              ...state.sessionsByProject,
+              [projectId]: existing.filter((s) => s.id !== sessionId),
+            },
+            activeSessionIdByProject: {
+              ...state.activeSessionIdByProject,
+              [projectId]: activeId === sessionId ? null : activeId,
+            },
+          }
+        })
+        if (options?.broadcast !== false) {
+          broadcast({ type: 'remove_session', projectId, sessionId })
+        }
+      },
       setSessionMessages: (sessionId, messages, options) => {
         set((state) => ({
           messagesBySession: {
@@ -227,6 +248,9 @@ function initializeSync() {
         break
       case 'upsert_session':
         state.upsertSession(payload.projectId, payload.session, { broadcast: false })
+        break
+      case 'remove_session':
+        state.removeSession(payload.projectId, payload.sessionId, { broadcast: false })
         break
       case 'set_session_messages':
         state.setSessionMessages(payload.sessionId, payload.messages, { broadcast: false })

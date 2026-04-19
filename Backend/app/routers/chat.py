@@ -64,6 +64,15 @@ async def update_session(
     return ChatSessionResponse.from_orm(session)
 
 
+@router.delete("/sessions/{session_id}", status_code=204)
+async def delete_session(
+    session_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await chat_service.delete_session(db, session_id, current_user.id)
+
+
 @router.patch("/sessions/{session_id}/finish", response_model=ChatSessionResponse)
 async def finish_session(
     session_id: uuid.UUID,

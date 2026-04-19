@@ -395,6 +395,14 @@ async def finish_session(
     return await get_session(db, session_id, user_id)
 
 
+async def delete_session(
+    db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    session = await _verify_session_ownership(db, session_id, user_id)
+    await db.delete(session)
+    await db.commit()
+
+
 async def add_message(
     db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID, data: ChatMessageCreate
 ) -> ChatMessage:

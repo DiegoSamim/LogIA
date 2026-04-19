@@ -19,6 +19,10 @@ export const chatService = {
     api.get<ChatMessageDTO[]>(`/sessions/${sessionId}/messages`, { signal }),
   addMessage: (sessionId: string, data: CreateChatMessageRequest) =>
     api.post<ChatMessageDTO>(`/sessions/${sessionId}/messages`, data),
+  updateSession: (sessionId: string, data: { title?: string | null }) =>
+    api.patch<ChatSessionDTO>(`/sessions/${sessionId}`, data),
+  deleteSession: (sessionId: string) =>
+    api.delete(`/sessions/${sessionId}`),
   finishSession: (sessionId: string) =>
     api.patch<ChatSessionDTO>(`/sessions/${sessionId}/finish`),
   startQueryRun: (projectId: string, data: StartQueryRunRequest) =>

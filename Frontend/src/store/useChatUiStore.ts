@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { ChatMode } from '@/data/dtos'
 
 interface ChatUiState {
@@ -7,8 +8,15 @@ interface ChatUiState {
   reset: () => void
 }
 
-export const useChatUiStore = create<ChatUiState>((set) => ({
-  mode: 'register',
-  setMode: (mode) => set({ mode }),
-  reset: () => set({ mode: 'register' }),
-}))
+export const useChatUiStore = create<ChatUiState>()(
+  persist(
+    (set) => ({
+      mode: 'register',
+      setMode: (mode) => set({ mode }),
+      reset: () => set({ mode: 'register' }),
+    }),
+    {
+      name: 'logia-chat-ui',
+    },
+  ),
+)

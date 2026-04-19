@@ -49,6 +49,9 @@ export type Sender = 'user' | 'assistant' | 'system'
 /** chat_sessions.status */
 export type SessionStatus = 'active' | 'finished' | 'abandoned'
 
+/** query_runs.status */
+export type QueryRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+
 // ── User ────────────────────────────────────────────────────────────────────
 
 /**
@@ -318,6 +321,7 @@ export interface ChatSessionDTO {
   ended_at: string | null     // source: chat_sessions.ended_at
   created_at: string          // source: chat_sessions.created_at
   updated_at: string          // source: chat_sessions.updated_at
+  latest_query_run?: QueryRunDTO | null
 }
 
 /**
@@ -334,6 +338,23 @@ export interface ChatMessageDTO {
   created_at: string                      // source: chat_messages.created_at
 }
 
+export interface QueryRunDTO {
+  id: string
+  session_id: string
+  question_message_id: string | null
+  response_message_id: string | null
+  status: QueryRunStatus
+  question_key: string
+  question_text: string
+  error_message: string | null
+  result_metadata: Record<string, unknown> | null
+  started_at: string | null
+  completed_at: string | null
+  cancelled_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface CreateChatSessionRequest {
   mode: ChatMode
   title?: string | null
@@ -344,4 +365,21 @@ export interface CreateChatMessageRequest {
   message_type?: string
   content: string
   metadata?: Record<string, unknown> | null
+}
+
+export interface StartQueryRunRequest {
+  session_id?: string | null
+  question_key: string
+  question_text: string
+}
+
+export interface StartQueryRunResponse {
+  session: ChatSessionDTO
+  run: QueryRunDTO
+  question_message: ChatMessageDTO
+}
+
+export interface CancelQueryRunResponse {
+  run: QueryRunDTO
+  cancellation_message: ChatMessageDTO | null
 }

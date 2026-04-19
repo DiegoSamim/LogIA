@@ -1,6 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 import StackBadge from '@/components/ui/StackBadge'
-import type { ChatMessageViewModel, EnumChipOption, ProjectQuestion, SidePanelSection, TaskRegisterQuestion } from '@/pages/Chat/types'
+import type {
+  ChatMessageViewModel,
+  EnumChipOption,
+  ProjectQuestion,
+  QueryQuestionOption,
+  SidePanelSection,
+  TaskRegisterQuestion,
+} from '@/pages/Chat/types'
 
 export const REGISTER_COPY: {
   messages: ChatMessageViewModel[]
@@ -87,66 +94,59 @@ export const REGISTER_COPY: {
   ],
 }
 
-export const QUERY_COPY: {
-  messages: ChatMessageViewModel[]
-  fixedQuestions: string[]
-  panelSections: SidePanelSection[]
-} = {
-  messages: [
-    {
-      id: 'query-1',
-      sender: 'assistant',
-      tone: 'standard',
-      content:
-        'Com base no histórico disponível, o time já consolidou uma direção visual para a experiência de chat e separou claramente a fase de interface da fase de integração com backend.',
-      orderedItems: [
-        'Definir uma tela dual-mode com alternância entre registro e consulta.',
-        'Manter um painel contextual à direita para apoiar leitura da sessão.',
-        'Reutilizar o shell atual do app sem mudar o header global.',
-      ],
-      references: ['chat_sessions', 'chat_messages', 'tasks', 'project_profiles'],
-    },
-  ],
-  fixedQuestions: [
-    'O que fiz essa semana?',
-    'Quais bloqueios já registrei?',
-    'Resumo técnico do projeto',
-    'Tarefas ainda em aberto',
-  ],
-  panelSections: [
-    {
-      title: 'Contexto da consulta',
-      content: (
-        <div className="space-y-4 text-xs text-white/56">
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Fonte principal</p>
-            <p className="mt-2 text-white/78">Histórico técnico do LogIA</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Escopo sugerido</p>
-            <p className="mt-2 leading-relaxed">Conversas de registro, updates de tarefa e decisões sobre experiência visual do frontend.</p>
-          </div>
+export const QUERY_FIXED_QUESTIONS: QueryQuestionOption[] = [
+  {
+    key: 'weekly-progress',
+    label: 'O que fiz essa semana?',
+    helper: 'Consolida os registros mais recentes e highlights do projeto.',
+  },
+  {
+    key: 'recorded-blockers',
+    label: 'Quais bloqueios já registrei?',
+    helper: 'Recupera impedimentos documentados no histórico técnico.',
+  },
+  {
+    key: 'technical-summary',
+    label: 'Resumo técnico do projeto',
+    helper: 'Agrupa snapshots e updates com foco em decisões e implementação.',
+  },
+  {
+    key: 'open-tasks',
+    label: 'Tarefas ainda em aberto',
+    helper: 'Mostra tarefas abertas e contexto do que falta avançar.',
+  },
+]
+
+export const QUERY_PANEL_SECTIONS: SidePanelSection[] = [
+  {
+    title: 'Contexto da consulta',
+    content: (
+      <div className="space-y-4 text-xs text-white/56">
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Fonte principal</p>
+          <p className="mt-2 text-white/78">Sessões de consulta, tarefas indexadas e histórico técnico do projeto.</p>
         </div>
-      ),
-    },
-    {
-      title: 'Atalhos de filtro',
-      content: (
-        <div className="flex flex-wrap gap-2">
-          {['Frontend', 'UI/UX', 'Integração', 'Arquitetura'].map((item) => (
-            <button
-              key={item}
-              type="button"
-              className="rounded-full border border-white/10 bg-surface-high px-3 py-1.5 text-[11px] text-white/52 transition-colors duration-150 hover:border-accent-indigo/26 hover:text-white/82"
-            >
-              {item}
-            </button>
-          ))}
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Modo da V1</p>
+          <p className="mt-2 leading-relaxed">A resposta vem de um backend mock estruturado sobre `knowledge_chunks`, pronto para evoluir para RAG/LLM depois.</p>
         </div>
-      ),
-    },
-  ],
-}
+      </div>
+    ),
+  },
+  {
+    title: 'Perguntas disponíveis',
+    content: (
+      <div className="space-y-2.5">
+        {QUERY_FIXED_QUESTIONS.map((item) => (
+          <div key={item.key} className="rounded-xl border border-white/6 bg-surface-base/64 px-3 py-3">
+            <p className="text-[11px] font-semibold text-white/78">{item.label}</p>
+            <p className="mt-1 text-[11px] leading-5 text-white/40">{item.helper}</p>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+]
 
 export const PROJECT_QUESTIONS: ProjectQuestion[] = [
   {

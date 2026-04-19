@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
@@ -9,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.core.config import get_settings
 from app.models.project import Project
 from app.models.task import ProjectMember, Task, TaskAttachment, TaskCheckpoint, TaskUpdate
-from app.services import project_service
+from app.services import knowledge_service, project_service
 from app.schemas.task import TaskCheckpointBatchCreate, TaskCheckpointCreate, TaskCheckpointPatch, TaskCreate, TaskPatch, TaskUpdateCreate
 
 settings = get_settings()
@@ -23,6 +24,18 @@ ALLOWED_MIME_TYPES = {
     "image/svg+xml",
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def _parse_optional_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Formato de data inválido. Use ISO 8601.",
+        ) from exc
 
 
 def _compose_task_update_details(
@@ -109,12 +122,19 @@ async def create(
         next_steps=data.next_steps,
         people_involved=data.people_involved,
         tags=data.tags or [],
+        hours_worked=data.hours_worked,
+        started_at=_parse_optional_datetime(data.started_at),
+        completed_at=_parse_optional_datetime(data.completed_at),
     )
     db.add(task)
     await db.flush()
 
     initial_update = _build_initial_update(task, data, user_id)
     db.add(initial_update)
+    await db.flush()
+
+    await knowledge_service.reindex_task_snapshot(db, task)
+    await knowledge_service.index_task_update(db, task, initial_update)
 
     await db.commit()
     return await _fetch(db, task.id)
@@ -144,9 +164,16 @@ async def update(
 
     patch = data.model_dump(exclude_none=True)
 
+    if "started_at" in patch:
+        patch["started_at"] = _parse_optional_datetime(patch["started_at"])
+    if "completed_at" in patch:
+        patch["completed_at"] = _parse_optional_datetime(patch["completed_at"])
+
     for field, value in patch.items():
         setattr(task, field, value)
 
+    await db.flush()
+    await knowledge_service.reindex_task_snapshot(db, task)
     await db.commit()
     return await _fetch(db, task.id)
 
@@ -172,7 +199,7 @@ async def list_updates(
 async def add_update(
     db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateCreate
 ) -> TaskUpdate:
-    await _verify_task_ownership(db, task_id, user_id)
+    task = await _verify_task_ownership(db, task_id, user_id)
     update_obj = TaskUpdate(
         id=uuid.uuid4(),
         task_id=task_id,
@@ -184,6 +211,8 @@ async def add_update(
         new_status=data.new_status,
     )
     db.add(update_obj)
+    await db.flush()
+    await knowledge_service.index_task_update(db, task, update_obj)
     await db.commit()
     await db.refresh(update_obj)
     return update_obj
@@ -200,6 +229,9 @@ async def create_checkpoint(
         order_index=data.order_index,
     )
     db.add(cp)
+    await db.flush()
+    task = await _fetch(db, task_id)
+    await knowledge_service.reindex_task_snapshot(db, task)
     await db.commit()
     await db.refresh(cp)
     return cp
@@ -223,6 +255,9 @@ async def update_checkpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Checkpoint não encontrado.")
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(cp, field, value)
+    await db.flush()
+    task = await _fetch(db, task_id)
+    await knowledge_service.reindex_task_snapshot(db, task)
     await db.commit()
     await db.refresh(cp)
     return cp
@@ -242,6 +277,9 @@ async def create_checkpoints_batch(
         for item in data.items
     ]
     db.add_all(checkpoints)
+    await db.flush()
+    task = await _fetch(db, task_id)
+    await knowledge_service.reindex_task_snapshot(db, task)
     await db.commit()
     for cp in checkpoints:
         await db.refresh(cp)

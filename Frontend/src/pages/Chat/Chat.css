@@ -48,6 +48,36 @@
     0 18px 38px rgb(0 0 0 / 0.22);
 }
 
+.query-message-shell {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.04),
+    0 18px 38px rgb(0 0 0 / 0.2);
+}
+
+.query-message-sending {
+  animation: query-message-sending 720ms ease-out both;
+}
+
+.query-message-pending {
+  box-shadow:
+    0 0 0 1px rgb(99 102 241 / 0.22),
+    0 18px 42px rgb(79 70 229 / 0.18);
+}
+
+.query-message-error {
+  animation: query-message-error 420ms ease-out both;
+}
+
+.query-message-cancelled {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.04),
+    0 12px 28px rgb(0 0 0 / 0.16);
+}
+
+.query-dot {
+  animation: query-dot 900ms ease-in-out infinite;
+}
+
 .chat-panel-card {
   box-shadow:
     inset 0 0 0 1px rgb(255 255 255 / 0.03),
@@ -90,5 +120,42 @@
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes query-message-sending {
+  0% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes query-dot {
+  0%, 80%, 100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes query-message-error {
+  0% {
+    transform: translateX(-4px);
+  }
+  35% {
+    transform: translateX(4px);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+  100% {
+    transform: translateX(0);
   }
 }

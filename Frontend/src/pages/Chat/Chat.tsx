@@ -62,6 +62,8 @@ export default function Chat() {
               />
             ) : (
               <RegularChatFlow
+                projectId={currentProject?.id ?? null}
+                projectName={currentProject?.name ?? null}
                 userInitials={userInitials}
                 isPanelOpen={isPanelOpen}
                 onTogglePanel={setIsPanelOpen}

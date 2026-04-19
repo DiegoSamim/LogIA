@@ -18,7 +18,7 @@ db-down:
 
 ## Inicia apenas o backend
 backend:
-	cd $(BACKEND) && source $(VENV)/bin/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	cd $(BACKEND) && source $(VENV)/bin/activate && alembic upgrade head && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Inicia apenas o frontend
 frontend:

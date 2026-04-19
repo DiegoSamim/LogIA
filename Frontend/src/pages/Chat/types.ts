@@ -1,4 +1,15 @@
-import type { ProjectMemberDTO, TaskCategory, TaskDTO, TaskPriority, TaskStatus, TaskUpdateDTO, UpdateType } from '@/data/dtos'
+import type {
+  ChatMessageDTO,
+  ChatSessionDTO,
+  ProjectMemberDTO,
+  QueryRunDTO,
+  TaskCategory,
+  TaskDTO,
+  TaskPriority,
+  TaskStatus,
+  TaskUpdateDTO,
+  UpdateType,
+} from '@/data/dtos'
 
 export interface ChatMessageViewModel {
   id: string
@@ -21,6 +32,21 @@ export interface ProjectQuestion {
   placeholder: string
   required: boolean
   hint?: string
+}
+
+export interface QueryQuestionOption {
+  key: string
+  label: string
+  helper: string
+}
+
+export type QuerySessionVisualState = 'idle' | 'loading' | 'receiving' | 'error' | 'cancelled'
+
+export interface QuerySessionState {
+  session: ChatSessionDTO
+  run: QueryRunDTO | null
+  messages: ChatMessageDTO[]
+  visualState: QuerySessionVisualState
 }
 
 export interface ProjectDraft {
@@ -153,6 +179,8 @@ export interface NewProjectFlowProps {
 }
 
 export interface RegularChatFlowProps {
+  projectId: string | null
+  projectName: string | null
   userInitials: string
   isPanelOpen: boolean
   onTogglePanel: (open: boolean) => void

@@ -35,7 +35,30 @@ log "Subindo container do banco de dados..."
 docker compose -f "$BACKEND/docker-compose.yml" up -d
 ok "Banco rodando em localhost:5432"
 
-# ── 2. backend ──────────────────────────────────────────────────────────
+# ── 2. migrações ────────────────────────────────────────────────────────
+log "Aplicando migrações do banco..."
+(
+  cd "$BACKEND"
+  source "$VENV/bin/activate"
+
+  for attempt in {1..20}; do
+    if alembic upgrade head >/tmp/logia-alembic.log 2>&1; then
+      ok "Migrações aplicadas com sucesso"
+      break
+    fi
+
+    if [ "$attempt" -eq 20 ]; then
+      cat /tmp/logia-alembic.log
+      echo
+      warn "Não foi possível aplicar as migrações após várias tentativas."
+      exit 1
+    fi
+
+    sleep 1
+  done
+)
+
+# ── 3. backend ──────────────────────────────────────────────────────────
 log "Iniciando backend FastAPI..."
 (
   cd "$BACKEND"
@@ -45,7 +68,7 @@ log "Iniciando backend FastAPI..."
 BACKEND_PID=$!
 ok "Backend PID $BACKEND_PID → http://localhost:8000"
 
-# ── 3. frontend ─────────────────────────────────────────────────────────
+# ── 4. frontend ─────────────────────────────────────────────────────────
 log "Iniciando frontend Vite..."
 (
   cd "$FRONTEND"

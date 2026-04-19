@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, desc, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +33,9 @@ class ChatSession(Base, TimestampMixin):
     messages: Mapped[list["ChatMessage"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
+    query_runs: Mapped[list["QueryRun"]] = relationship(  # type: ignore[name-defined]
+        back_populates="session", cascade="all, delete-orphan", order_by=lambda: desc(QueryRun.created_at)
+    )
 
 
 class ChatMessage(Base):
@@ -55,3 +58,42 @@ class ChatMessage(Base):
     )
 
     session: Mapped["ChatSession"] = relationship(back_populates="messages")
+
+
+class QueryRun(Base, TimestampMixin):
+    __tablename__ = "query_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    question_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("chat_messages.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    response_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("chat_messages.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    question_key: Mapped[str] = mapped_column(String(100))
+    question_text: Mapped[str] = mapped_column(Text)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    result_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    session: Mapped["ChatSession"] = relationship(back_populates="query_runs")
+    question_message: Mapped["ChatMessage | None"] = relationship(
+        foreign_keys=[question_message_id]
+    )
+    response_message: Mapped["ChatMessage | None"] = relationship(
+        foreign_keys=[response_message_id]
+    )

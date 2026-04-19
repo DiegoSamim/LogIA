@@ -1,8 +1,13 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import { useAppStore } from '@/store/useAppStore'
 
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
+export const API_BASE_URL = import.meta.env.DEV
+  ? '/api/v1'
+  : configuredApiUrl || '/api/v1'
+
 const baseConfig = {
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1',
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 }
@@ -53,6 +58,8 @@ api.interceptors.response.use(
 export default api
 
 export function buildFileUrl(path: string): string {
-  const base = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '')
+  const base = /^https?:\/\//.test(API_BASE_URL)
+    ? API_BASE_URL.replace(/\/api\/v1\/?$/, '')
+    : window.location.origin
   return `${base}${path.startsWith('/') ? path : `/${path}`}`
 }

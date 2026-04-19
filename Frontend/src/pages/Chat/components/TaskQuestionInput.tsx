@@ -2,7 +2,7 @@ import type { ChecklistItem, ProjectMemberLookup, TaskRegisterQuestion } from '@
 import ChecklistInput from './ChecklistInput'
 import EnumChipSelector from './EnumChipSelector'
 import MemberMultiSelect from './MemberMultiSelect'
-import TagsInput from './TagsInput'
+import StackAutocomplete from '@/components/ui/StackAutocomplete'
 
 interface Props {
   question: TaskRegisterQuestion
@@ -74,7 +74,7 @@ export default function TaskQuestionInput({
             )}
 
             {isTags && (
-              <TagsInput
+              <StackAutocomplete
                 value={tagsValue}
                 onChange={onTagsChange}
                 placeholder={question.placeholder}

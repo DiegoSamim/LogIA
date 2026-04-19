@@ -99,36 +99,42 @@ export const QUERY_FIXED_QUESTIONS: QueryQuestionOption[] = [
     key: 'weekly-progress',
     label: 'O que fiz essa semana?',
     helper: 'Consolida os registros mais recentes e highlights do projeto.',
+    color: '#6366F1',
   },
   {
     key: 'recorded-blockers',
     label: 'Quais bloqueios já registrei?',
     helper: 'Recupera impedimentos documentados no histórico técnico.',
+    color: '#F43F5E',
   },
   {
     key: 'technical-summary',
     label: 'Resumo técnico do projeto',
     helper: 'Agrupa snapshots e updates com foco em decisões e implementação.',
+    color: '#8B5CF6',
   },
   {
     key: 'open-tasks',
     label: 'Tarefas ainda em aberto',
     helper: 'Mostra tarefas abertas e contexto do que falta avançar.',
+    color: '#F59E0B',
   },
 ]
 
 export const QUERY_PANEL_SECTIONS: SidePanelSection[] = [
   {
-    title: 'Contexto da consulta',
+    title: 'Versão de teste',
     content: (
-      <div className="space-y-4 text-xs text-white/56">
-        <div>
-          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Fonte principal</p>
-          <p className="mt-2 text-white/78">Sessões de consulta, tarefas indexadas e histórico técnico do projeto.</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Modo da V1</p>
-          <p className="mt-2 leading-relaxed">A resposta vem de um backend mock estruturado sobre `knowledge_chunks`, pronto para evoluir para RAG/LLM depois.</p>
+      <div className="rounded-[10px] border border-amber-400/20 bg-amber-400/6 px-3.5 py-3.5">
+        <div className="flex items-start gap-2.5">
+          <svg className="mt-0.5 shrink-0 text-amber-300/80" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <p className="text-[11px] leading-[1.6] text-white/56">
+            Esta versão <span className="font-semibold text-amber-300/80">não usa uma LLM real</span>. As respostas são geradas por um backend mock sem RAG ou modelo de linguagem. Versão sem integração com dados reais, apenas para testes de interface e experiência.
+          </p>
         </div>
       </div>
     ),

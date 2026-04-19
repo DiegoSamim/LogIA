@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import type { ChatMessageDTO, ChatSessionDTO, QueryRunStatus } from '@/data/dtos'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
+import type { ChatMessageDTO, ChatSessionDTO } from '@/data/dtos'
 import { QUERY_FIXED_QUESTIONS, QUERY_PANEL_SECTIONS } from '@/pages/Chat/constants'
 import type { RegularChatFlowProps, SidePanelSection } from '@/pages/Chat/types'
 import QueryConversationMessage, { type QueryConversationMessageItem } from '@/components/chat/QueryConversationMessage'
@@ -12,30 +12,8 @@ import { useQuerySessionsStore } from '@/store/useQuerySessionsStore'
 const EMPTY_QUERY_SESSIONS: ChatSessionDTO[] = []
 const EMPTY_MESSAGES: ChatMessageDTO[] = []
 
-function getRunLabel(status: QueryRunStatus | null | undefined) {
-  if (status === 'pending') return 'Na fila'
-  if (status === 'running') return 'Respondendo'
-  if (status === 'failed') return 'Erro'
-  if (status === 'cancelled') return 'Cancelada'
-  if (status === 'completed') return 'Respondida'
-  return 'Pronta'
-}
-
-function formatSessionDate(value: string | null | undefined) {
-  if (!value) return 'Agora'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Agora'
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
-
 export default function RegularChatFlow({
   projectId,
-  projectName,
   userInitials,
   isPanelOpen,
   onTogglePanel,
@@ -62,6 +40,7 @@ export default function RegularChatFlow({
   const scrollRef = useRef<HTMLDivElement>(null)
   const pollControllersRef = useRef<Record<string, AbortController>>({})
   const messageRequestSeqRef = useRef<Record<string, number>>({})
+  const selectedQuestion = QUERY_FIXED_QUESTIONS.find((item) => item.key === selectedQuestionKey) ?? QUERY_FIXED_QUESTIONS[0]
 
   const activeSession = activeSessionId
     ? querySessions.find((session) => session.id === activeSessionId) ?? null
@@ -270,34 +249,7 @@ export default function RegularChatFlow({
     return items
   }, [activeMessages, activeRun, activeRunBusy, activeSession])
 
-  const dynamicPanelSections: SidePanelSection[] = [
-    {
-      title: 'Sessão ativa',
-      content: (
-        <div className="space-y-4 text-xs text-white/56">
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Projeto</p>
-            <p className="mt-2 text-white/78">{projectName ?? 'Projeto atual'}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Sessão</p>
-            <p className="mt-2 text-white/78">{activeSession?.title ?? 'Nova consulta'}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Status</p>
-              <p className="mt-2 text-white/76">{getRunLabel(activeRun?.status ?? null)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.16em] text-white/28 uppercase">Atualizado</p>
-              <p className="mt-2 text-white/76">{formatSessionDate(activeSession?.updated_at)}</p>
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    ...QUERY_PANEL_SECTIONS,
-  ]
+  const dynamicPanelSections: SidePanelSection[] = QUERY_PANEL_SECTIONS
 
   if (!projectId) {
     return (
@@ -357,57 +309,125 @@ export default function RegularChatFlow({
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <div className="flex min-w-0 flex-col gap-2">
                   <span className="text-[10px] font-semibold tracking-[0.18em] text-white/28 uppercase">Pergunta fixa</span>
-                  <Select
-                    value={selectedQuestionKey}
-                    onChange={(e) => setSelectedQuestionKey(e.target.value)}
+                  <Autocomplete
+                    disableClearable
+                    options={QUERY_FIXED_QUESTIONS}
+                    value={selectedQuestion}
+                    getOptionLabel={(option) => option.label}
+                    isOptionEqualToValue={(option, value) => option.key === value.key}
+                    onChange={(_, nextQuestion) => {
+                      if (nextQuestion) {
+                        setSelectedQuestionKey(nextQuestion.key)
+                      }
+                    }}
                     disabled={activeRunBusy || submitting}
                     size="small"
-                    MenuProps={{
-                      PaperProps: {
+                    popupIcon={null}
+                    slotProps={{
+                      paper: {
                         sx: {
-                          bgcolor: '#13161E',
+                          mt: 1,
+                          borderRadius: '16px',
                           border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: '14px',
-                          mt: 0.5,
-                          '& .MuiMenuItem-root': {
-                            fontSize: '0.8125rem',
-                            color: 'rgba(255,255,255,0.78)',
-                            borderRadius: '8px',
-                            mx: 0.5,
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
-                            '&.Mui-selected': { bgcolor: 'rgba(99,102,241,0.14)', color: 'rgba(255,255,255,0.92)' },
-                            '&.Mui-selected:hover': { bgcolor: 'rgba(99,102,241,0.2)' },
+                          background: 'linear-gradient(180deg,rgba(19,22,30,0.98),rgba(13,15,20,0.98))',
+                          boxShadow: '0 18px 48px rgba(0,0,0,0.45)',
+                          color: 'rgba(255,255,255,0.88)',
+                          overflow: 'hidden',
+                        },
+                      },
+                      popper: {
+                        sx: {
+                          '& .MuiAutocomplete-listbox': {
+                            p: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                          },
+                          '& .MuiAutocomplete-option': {
+                            minHeight: 'unset',
+                            borderRadius: '12px',
+                            px: 1.5,
+                            py: 1.25,
+                            fontSize: '0.875rem',
+                            color: 'rgba(255,255,255,0.72)',
+                            '&[aria-selected="true"]': {
+                              backgroundColor: 'rgba(99,102,241,0.14)',
+                              color: 'rgba(255,255,255,0.94)',
+                            },
+                            '&.Mui-focused': {
+                              backgroundColor: 'rgba(255,255,255,0.05)',
+                            },
+                            '&[aria-selected="true"].Mui-focused': {
+                              backgroundColor: 'rgba(99,102,241,0.18)',
+                            },
                           },
                         },
                       },
+                      clearIndicator: {
+                        sx: {
+                          color: 'rgba(255,255,255,0.34)',
+                          '&:hover': { color: 'rgba(255,255,255,0.72)' },
+                        },
+                      },
                     }}
-                    sx={{
-                      height: 48,
-                      borderRadius: '18px',
-                      color: 'rgba(255,255,255,0.88)',
-                      fontSize: '0.875rem',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '18px',
-                      },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        border: '1px solid rgba(255,255,255,0.16)',
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        border: '1px solid rgba(99,102,241,0.38)',
-                        boxShadow: '0 0 0 3px rgba(99,102,241,0.12)',
-                      },
-                      '&.Mui-disabled': { opacity: 0.6, cursor: 'not-allowed' },
-                      '& .MuiSelect-icon': { color: 'rgba(255,255,255,0.32)' },
-                      bgcolor: 'rgba(13,15,20,0.88)',
-                    }}
+                    renderOption={(props, option) => (
+                      <li {...props}>
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <span
+                            className="mt-[6px] h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: option.color }}
+                            aria-hidden="true"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm text-white/84">{option.label}</p>
+                            <p className="mt-0.5 text-[11px] leading-5 text-white/42">{option.helper}</p>
+                          </div>
+                        </div>
+                      </li>
+                    )}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Selecione uma pergunta"
+                        variant="outlined"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            alignItems: 'center',
+                            minHeight: '48px',
+                            borderRadius: '18px',
+                            backgroundColor: 'rgba(13,15,20,0.88)',
+                            color: 'rgba(255,255,255,0.86)',
+                            px: '6px',
+                            py: '4px',
+                            '& fieldset': {
+                              borderColor: 'rgba(255,255,255,0.08)',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: 'rgba(255,255,255,0.14)',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: 'rgba(99,102,241,0.38)',
+                              boxShadow: '0 0 0 3px rgba(99,102,241,0.12)',
+                            },
+                            '&.Mui-disabled': {
+                              opacity: 0.6,
+                              cursor: 'not-allowed',
+                            },
+                          },
+                          '& .MuiOutlinedInput-input': {
+                            color: 'rgba(255,255,255,0.86)',
+                            fontSize: '0.875rem',
+                            py: '9px',
+                          },
+                          '& .MuiOutlinedInput-input::placeholder': {
+                            color: 'rgba(255,255,255,0.24)',
+                            opacity: 1,
+                          },
+                        }}
+                      />
+                    )}
                   >
-                    {QUERY_FIXED_QUESTIONS.map((question) => (
-                      <MenuItem key={question.key} value={question.key}>
-                        {question.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                  </Autocomplete>
                 </div>
 
                 <div className="flex shrink-0 flex-col gap-2">

@@ -38,6 +38,7 @@ export interface QueryQuestionOption {
   key: string
   label: string
   helper: string
+  color: string
 }
 
 export type QuerySessionVisualState = 'idle' | 'loading' | 'receiving' | 'error' | 'cancelled'

@@ -229,6 +229,27 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 
 ---
 
+## 🏃 `query_runs`
+**Descrição:** Execuções de consulta do modo `query`, separadas da sessão e das mensagens
+
+### Atributos
+- `id (UUID)` → identificador da execução  
+- `session_id (UUID)` → sessão de chat associada  
+- `question_message_id (UUID)` → mensagem da pergunta vinculada  
+- `response_message_id (UUID)` → mensagem final de resposta vinculada  
+- `status (TEXT)` → estado da execução  
+- `question_key (TEXT)` → identificador lógico da pergunta fixa  
+- `question_text (TEXT)` → texto da pergunta executada  
+- `error_message (TEXT)` → mensagem de erro, se houver  
+- `result_metadata (JSONB)` → referências, status reconciliado e dados auxiliares  
+- `started_at (TIMESTAMP)` → início da execução  
+- `completed_at (TIMESTAMP)` → conclusão da execução  
+- `cancelled_at (TIMESTAMP)` → cancelamento da execução  
+- `created_at (TIMESTAMP)` → data de criação  
+- `updated_at (TIMESTAMP)` → última atualização  
+
+---
+
 ## 🧠 `knowledge_chunks`
 **Descrição:** Base vetorial para RAG
 
@@ -287,6 +308,15 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 
 ---
 
+## Query Run Status
+- `pending`
+- `running`
+- `completed`
+- `failed`
+- `cancelled`
+
+---
+
 ## Sender
 - `user`
 - `assistant`
@@ -298,6 +328,13 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 - `active`
 - `finished`
 - `abandoned`
+
+---
+
+## Project Member Role
+- `admin`
+- `editor`
+- `viewer`
 
 ---
 
@@ -342,6 +379,10 @@ O LogIA é um sistema de **memória técnica para desenvolvedores**, baseado em:
 
 ## Chat
 - `chat_sessions 1:N chat_messages`
+- `chat_sessions 1:N query_runs`
+- `query_runs N:1 chat_sessions`
+- `query_runs 0..1:1 chat_messages (question_message_id)`
+- `query_runs 0..1:1 chat_messages (response_message_id)`
 
 ---
 

@@ -1,4 +1,5 @@
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
@@ -37,8 +38,23 @@ def decode_access_token(token: str) -> dict | None:
         return None
 
 
-def generate_refresh_token() -> str:
+def generate_refresh_token_secret() -> str:
     return secrets.token_urlsafe(64)
+
+
+def build_refresh_token(token_id: uuid.UUID, secret: str) -> str:
+    return f"{token_id}.{secret}"
+
+
+def parse_refresh_token(raw_token: str) -> tuple[uuid.UUID, str] | None:
+    token_id, separator, secret = raw_token.partition(".")
+    if not separator or not secret:
+        return None
+
+    try:
+        return uuid.UUID(token_id), secret
+    except ValueError:
+        return None
 
 
 def hash_refresh_token(token: str) -> str:

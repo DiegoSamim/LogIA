@@ -2,20 +2,61 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import (
+    build_refresh_token,
     create_access_token,
-    generate_refresh_token,
+    generate_refresh_token_secret,
     hash_password,
     hash_refresh_token,
+    parse_refresh_token,
     refresh_token_expires_at,
     verify_password,
     verify_refresh_token,
 )
 from app.models.user import RefreshToken, User
 from app.schemas.auth import LoginRequest, RegisterRequest
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+async def _cleanup_refresh_tokens(db: AsyncSession, user_id: uuid.UUID) -> None:
+    await db.execute(
+        delete(RefreshToken).where(
+            RefreshToken.user_id == user_id,
+            (RefreshToken.revoked_at.is_not(None)) | (RefreshToken.expires_at <= _now()),
+        )
+    )
+
+
+async def _find_refresh_token(
+    db: AsyncSession, raw_token: str
+) -> RefreshToken | None:
+    parsed = parse_refresh_token(raw_token)
+    if parsed:
+        token_id, secret = parsed
+        token = await db.get(RefreshToken, token_id)
+        if not token or token.revoked_at is not None or token.expires_at <= _now():
+            return None
+        if not verify_refresh_token(secret, token.token_hash):
+            return None
+        return token
+
+    # Legacy fallback for older cookies issued before token-id lookup.
+    result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.revoked_at.is_(None),
+            RefreshToken.expires_at > _now(),
+        )
+    )
+    for token in result.scalars().all():
+        if verify_refresh_token(raw_token, token.token_hash):
+            return token
+    return None
 
 
 async def register(db: AsyncSession, data: RegisterRequest) -> tuple[User, str, str]:
@@ -64,30 +105,12 @@ async def login(
 
 
 async def refresh(db: AsyncSession, raw_token: str) -> tuple[User, str, str]:
-    # Find all non-revoked, non-expired tokens and check hash
-    result = await db.execute(
-        select(RefreshToken).where(
-            RefreshToken.revoked_at.is_(None),
-            RefreshToken.expires_at > datetime.now(timezone.utc),
-        )
-    )
-    tokens = result.scalars().all()
-
-    matched: RefreshToken | None = None
-    for rt in tokens:
-        if verify_refresh_token(raw_token, rt.token_hash):
-            matched = rt
-            break
-
+    matched = await _find_refresh_token(db, raw_token)
     if not matched:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token inválido ou expirado.",
         )
-
-    # Revoke old token
-    matched.revoked_at = datetime.now(timezone.utc)
-    db.add(matched)
 
     user = await db.get(User, matched.user_id)
     if not user or not user.is_active:
@@ -96,6 +119,8 @@ async def refresh(db: AsyncSession, raw_token: str) -> tuple[User, str, str]:
             detail="Usuário não encontrado ou inativo.",
         )
 
+    await db.delete(matched)
+    await _cleanup_refresh_tokens(db, user.id)
     access_token, raw_refresh = await _issue_tokens(db, user)
     await db.commit()
     return user, access_token, raw_refresh
@@ -105,20 +130,14 @@ async def logout(db: AsyncSession, raw_token: str | None) -> None:
     if not raw_token:
         return
 
-    result = await db.execute(
-        select(RefreshToken).where(
-            RefreshToken.revoked_at.is_(None),
-            RefreshToken.expires_at > datetime.now(timezone.utc),
-        )
-    )
-    tokens = result.scalars().all()
+    matched = await _find_refresh_token(db, raw_token)
+    if not matched:
+        return
 
-    for rt in tokens:
-        if verify_refresh_token(raw_token, rt.token_hash):
-            rt.revoked_at = datetime.now(timezone.utc)
-            db.add(rt)
-            await db.commit()
-            return
+    user_id = matched.user_id
+    await db.delete(matched)
+    await _cleanup_refresh_tokens(db, user_id)
+    await db.commit()
 
 
 async def _issue_tokens(
@@ -127,16 +146,19 @@ async def _issue_tokens(
     user_agent: str | None = None,
     ip: str | None = None,
 ) -> tuple[str, str]:
-    raw_refresh = generate_refresh_token()
+    token_id = uuid.uuid4()
+    refresh_secret = generate_refresh_token_secret()
     rt = RefreshToken(
-        id=uuid.uuid4(),
+        id=token_id,
         user_id=user.id,
-        token_hash=hash_refresh_token(raw_refresh),
+        token_hash=hash_refresh_token(refresh_secret),
         expires_at=refresh_token_expires_at(),
-        created_at=datetime.now(timezone.utc),
+        created_at=_now(),
         user_agent=user_agent,
         ip_address=ip,
     )
     db.add(rt)
+    await _cleanup_refresh_tokens(db, user.id)
     access_token = create_access_token(str(user.id))
+    raw_refresh = build_refresh_token(token_id, refresh_secret)
     return access_token, raw_refresh

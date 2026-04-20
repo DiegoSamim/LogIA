@@ -13,7 +13,7 @@ router = APIRouter()
 settings = get_settings()
 
 REFRESH_COOKIE = "refresh_token"
-COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7 days in seconds
+COOKIE_MAX_AGE = 60 * 60 * 24 * settings.REFRESH_TOKEN_EXPIRE_DAYS
 
 
 def _set_refresh_cookie(response: Response, token: str) -> None:

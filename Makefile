@@ -2,7 +2,7 @@ BACKEND  := Backend
 FRONTEND := Frontend
 VENV     := $(BACKEND)/.venv
 
-.PHONY: dev db backend frontend stop db-down install help
+.PHONY: dev db backend frontend stop db-down install help share
 
 ## Inicia tudo: banco + backend + frontend
 dev:
@@ -23,6 +23,10 @@ backend:
 ## Inicia apenas o frontend
 frontend:
 	cd $(FRONTEND) && npm run dev
+
+## Expõe o frontend local via Cloudflare Tunnel
+share:
+	@bash share.sh
 
 ## Instala dependências (Python venv + npm)
 install:

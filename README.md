@@ -155,6 +155,7 @@ Documentação detalhada:
 - Python 3.12+
 - Node.js
 - Docker e Docker Compose
+- `cloudflared` opcional para compartilhamento temporário
 
 ## Subida rápida
 
@@ -236,6 +237,24 @@ Exemplo de banco local:
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/logia
 ```
 
+## Compartilhar localmente com colegas
+
+Se você quiser compartilhar sua instância local para 1–2 colegas testarem sem fazer deploy:
+
+1. suba o projeto com `./dev.sh`
+2. abra o túnel com `./share.sh`
+3. compartilhe apenas a URL HTTPS gerada pelo `cloudflared`
+
+Também existe atalho:
+
+```bash
+make share
+```
+
+Guia completo:
+
+- [docs/local-sharing.md](/home/diego/programacao/LogIA/docs/local-sharing.md)
+
 ## Rotas Principais da Aplicação
 
 ### Frontend
@@ -286,4 +305,3 @@ O próximo passo natural da plataforma é evoluir o executor de consulta mock pa
 - O banco local usa `pgvector/pgvector:pg16`.
 - O modo consulta já está preparado para race conditions, polling, cancelamento e persistência local.
 - A documentação de schema foi mantida em [docs/database.md](/home/diego/programacao/LogIA/docs/database.md).
-

@@ -14,9 +14,6 @@ export default function TaskCard({ task, onClick }: { task: TaskDTO; onClick?: (
     ? PRIORITY_CHIP_OPTIONS.find((option) => option.value === task.priority)
     : null
 
-  const visibleTags = task.tags.slice(0, 2)
-  const overflowTags = task.tags.length - visibleTags.length
-
   return (
     <article
       onClick={onClick}
@@ -44,19 +41,6 @@ export default function TaskCard({ task, onClick }: { task: TaskDTO; onClick?: (
             {priorityOption ? (
               <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${priorityOption.colorClass}`}>
                 {priorityOption.label}
-              </span>
-            ) : null}
-            {visibleTags.map((tag) => (
-              <span
-                key={tag}
-                className="max-w-full rounded-full border border-white/8 bg-surface-base/56 px-2.5 py-0.5 text-[10px] break-all text-white/52"
-              >
-                {tag}
-              </span>
-            ))}
-            {overflowTags > 0 ? (
-              <span className="rounded-full border border-white/8 bg-surface-base/56 px-2.5 py-0.5 text-[10px] text-white/32">
-                +{overflowTags}
               </span>
             ) : null}
           </div>

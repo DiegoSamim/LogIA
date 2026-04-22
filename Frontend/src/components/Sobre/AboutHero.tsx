@@ -30,8 +30,8 @@ export default function AboutHero({
 }) {
   return (
     <div className="border-b border-white/6 px-5 py-6 sm:px-7">
-      <div className="flex flex-col gap-4">
-        <div className="min-w-0">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold tracking-[0.28em] text-accent-violet/84 uppercase">
             Detalhes do projeto
           </p>
@@ -68,7 +68,7 @@ export default function AboutHero({
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex shrink-0 justify-end">
           <div className="flex flex-wrap gap-2">
             {editing ? (
               <>

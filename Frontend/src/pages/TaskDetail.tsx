@@ -92,6 +92,7 @@ export default function TaskDetail() {
       blocked_reason: task.blocked_reason ?? '',
       people_involved: task.people_involved ?? '',
       tags: task.tags,
+      hours_worked: task.hours_worked,
       started_at: task.started_at,
       completed_at: task.completed_at,
       feature_or_ticket: task.feature_or_ticket,

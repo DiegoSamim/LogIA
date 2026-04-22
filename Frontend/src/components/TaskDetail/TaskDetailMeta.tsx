@@ -49,6 +49,15 @@ const selectClass =
 const dateInputClass =
   'rounded-[8px] border border-white/10 bg-surface-high px-2.5 py-1.5 text-xs text-white/80 focus:border-accent-indigo/50 focus:outline-none focus:ring-1 focus:ring-accent-indigo/20 w-full [color-scheme:dark]'
 
+const numberInputClass =
+  'rounded-[8px] border border-white/10 bg-surface-high px-2.5 py-1.5 text-xs text-white/80 focus:border-accent-indigo/50 focus:outline-none focus:ring-1 focus:ring-accent-indigo/20 w-full'
+
+function formatHours(hours: number | null | undefined) {
+  if (hours === null || hours === undefined) return '—'
+  if (Number.isInteger(hours)) return `${hours}h`
+  return `${hours.toFixed(1).replace('.', ',')}h`
+}
+
 export default function TaskDetailMeta({ task, isEditing, draft, onDraftChange, onEdit }: Props) {
   const statusOption = STATUS_CHIP_OPTIONS.find(
     (o) => o.value === (isEditing ? (draft.status ?? task.status) : task.status),
@@ -63,6 +72,7 @@ export default function TaskDetailMeta({ task, isEditing, draft, onDraftChange, 
   const currentStatus = isEditing ? (draft.status ?? task.status) : task.status
   const currentTags = isEditing ? (draft.tags ?? task.tags) : task.tags
   const currentPeople = isEditing ? (draft.people_involved ?? task.people_involved) : task.people_involved
+  const currentHours = isEditing ? (draft.hours_worked ?? task.hours_worked) : task.hours_worked
 
   const people = currentPeople
     ? currentPeople.split(',').map((p) => p.trim()).filter(Boolean)
@@ -134,6 +144,24 @@ export default function TaskDetailMeta({ task, isEditing, draft, onDraftChange, 
       </MetaRow>
 
       <div className="my-1 h-px bg-white/4" />
+
+      {/* Horas */}
+      <MetaRow label="Horas">
+        {isEditing ? (
+          <input
+            type="number"
+            min="0"
+            value={currentHours ?? ''}
+            onChange={(e) => onDraftChange({ hours_worked: e.target.value ? Number(e.target.value) : null })}
+            placeholder="0"
+            className={numberInputClass}
+          />
+        ) : currentHours !== null && currentHours !== undefined ? (
+          <span>{formatHours(currentHours)}</span>
+        ) : (
+          <span className="text-white/24">—</span>
+        )}
+      </MetaRow>
 
       {/* Iniciado */}
       <MetaRow label="Iniciado">

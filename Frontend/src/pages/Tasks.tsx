@@ -161,7 +161,7 @@ export default function Tasks() {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/14 to-transparent" />
             <div className="pointer-events-none absolute -right-10 top-0 h-32 w-32 rounded-full bg-accent-violet/10 blur-3xl" />
 
-            <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-accent-indigo/72">
                   Task management
@@ -177,14 +177,11 @@ export default function Tasks() {
                 </p>
               </div>
 
-              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                <div className="rounded-full border border-white/8 bg-surface-container/70 px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-white/34">
-                  {filteredTasks.length} exibidas
-                </div>
+              <div className="flex shrink-0 items-start">
                 <button
                   type="button"
                   onClick={() => navigate('/chat')}
-                  className="flex items-center gap-2 rounded-[16px] bg-linear-to-r from-accent-indigo to-accent-violet px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(99,102,241,0.24)] transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.98]"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-[12px] bg-linear-to-r from-accent-indigo to-accent-violet px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_26px_rgba(99,102,241,0.22)] transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.98]"
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

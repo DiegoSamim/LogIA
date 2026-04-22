@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
 import type { ChatMessageDTO, ChatSessionDTO } from '@/data/dtos'
-import { QUERY_FIXED_QUESTIONS, QUERY_PANEL_SECTIONS } from '@/pages/Chat/constants'
-import type { RegularChatFlowProps, SidePanelSection } from '@/pages/Chat/types'
+import { QUERY_FIXED_QUESTIONS } from '@/pages/Chat/constants'
+import type { RegularChatFlowProps } from '@/pages/Chat/types'
 import QueryConversationMessage, { type QueryConversationMessageItem } from '@/components/chat/QueryConversationMessage'
-import SidePanel from '@/components/chat/SidePanel'
+import QueryContextPanel from '@/components/chat/QueryContextPanel'
 import { chatService } from '@/services/chat.service'
 import { useQuerySessionsStore } from '@/store/useQuerySessionsStore'
 
@@ -50,6 +50,40 @@ export default function RegularChatFlow({
     : null
   const activeMessages = activeSession ? messagesBySession[activeSession.id] ?? EMPTY_MESSAGES : EMPTY_MESSAGES
   const activeRunBusy = activeRun ? activeRun.status === 'pending' || activeRun.status === 'running' : false
+  const latestAnswerMessage = [...activeMessages]
+    .reverse()
+    .find((message) => message.message_type === 'query_answer')
+  const latestPanelPayload = latestAnswerMessage?.metadata?.panel_payload ?? null
+  const latestAnswerPayload = latestAnswerMessage?.metadata?.answer_payload ?? null
+  const latestReferences = latestAnswerMessage?.metadata?.references ?? null
+
+  useEffect(() => {
+    const questionKey =
+      (latestAnswerMessage?.metadata?.question_key as string | null | undefined) ??
+      activeRun?.question_key
+    if (questionKey && QUERY_FIXED_QUESTIONS.some((q) => q.key === questionKey)) {
+      setSelectedQuestionKey(questionKey)
+    }
+  }, [activeSessionId, latestAnswerMessage?.id, activeRun?.id])
+
+  useEffect(() => {
+    if (!latestAnswerMessage) return
+
+    const metadata = latestAnswerMessage.metadata
+    const answerSource = metadata?.answer_source ?? 'unknown'
+    const aiUsed = metadata?.ai_used === true
+
+    console.log('[LogIA Query] resposta recebida', {
+      messageId: latestAnswerMessage.id,
+      questionKey: metadata?.question_key,
+      answerSource,
+      aiUsed,
+      aiTrace: metadata?.ai_trace,
+      hasAnswerPayload: Boolean(metadata?.answer_payload),
+      hasPanelPayload: Boolean(metadata?.panel_payload),
+      references: Array.isArray(metadata?.references) ? metadata.references.length : 0,
+    })
+  }, [latestAnswerMessage])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -248,8 +282,6 @@ export default function RegularChatFlow({
 
     return items
   }, [activeMessages, activeRun, activeRunBusy, activeSession])
-
-  const dynamicPanelSections: SidePanelSection[] = QUERY_PANEL_SECTIONS
 
   if (!projectId) {
     return (
@@ -466,10 +498,14 @@ export default function RegularChatFlow({
         ].join(' ')}
       >
         {isPanelOpen ? (
-          <SidePanel
-            sections={dynamicPanelSections}
+          <QueryContextPanel
+            selectedQuestion={selectedQuestion}
+            activeRun={activeRun}
+            activeRunBusy={activeRunBusy}
+            panelPayload={latestPanelPayload}
+            fallbackAnswerPayload={latestAnswerPayload}
+            references={latestReferences}
             onClose={() => onTogglePanel(false)}
-            label="Contexto da sessão"
           />
         ) : (
           <button

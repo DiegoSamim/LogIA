@@ -6,6 +6,7 @@ import TimelineDot from '@mui/lab/TimelineDot'
 import TimelineItem from '@mui/lab/TimelineItem'
 import TimelineSeparator from '@mui/lab/TimelineSeparator'
 import type { TaskDTO, TaskUpdateDTO, UpdateType } from '@/data/dtos'
+import AutoResizeTextarea from '@/components/ui/AutoResizeTextarea'
 import { STATUS_CHIP_OPTIONS } from '@/pages/Chat/constants'
 import { formatRelativeDate } from '@/components/Tasks/utils'
 import { taskService } from '@/services/task.service'
@@ -159,11 +160,12 @@ export default function TaskUpdateTimeline({ taskId, task, updates, onNewUpdate,
           />
 
           {/* Details */}
-          <textarea
+          <AutoResizeTextarea
             rows={3}
             value={details}
             onChange={(e) => setDetails(e.target.value)}
             placeholder="Detalhes adicionais (opcional)..."
+            maxHeight={280}
             className="w-full resize-none rounded-[10px] border border-white/10 bg-surface-high/50 px-3.5 py-2.5 text-sm text-white/80 placeholder:text-white/18 focus:border-accent-indigo/40 focus:outline-none focus:ring-2 focus:ring-accent-indigo/14"
           />
 
@@ -178,11 +180,12 @@ export default function TaskUpdateTimeline({ taskId, task, updates, onNewUpdate,
           </label>
 
           {updateTaskSummary ? (
-            <textarea
+            <AutoResizeTextarea
               rows={3}
               value={taskSummary}
               onChange={(e) => setTaskSummary(e.target.value)}
               placeholder="Atualize o resumo geral e estável da tarefa..."
+              maxHeight={280}
               className="w-full resize-none rounded-[10px] border border-white/10 bg-surface-high/50 px-3.5 py-2.5 text-sm text-white/80 placeholder:text-white/18 focus:border-accent-indigo/40 focus:outline-none focus:ring-2 focus:ring-accent-indigo/14"
             />
           ) : null}

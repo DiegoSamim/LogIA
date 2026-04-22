@@ -97,7 +97,7 @@ export interface AttachmentUploadState {
   id: string
   file: File
   name: string
-  type: 'pdf' | 'image'
+  type: 'pdf' | 'image' | 'text'
   size: number
   status: 'pending' | 'uploading' | 'done' | 'error'
   url?: string

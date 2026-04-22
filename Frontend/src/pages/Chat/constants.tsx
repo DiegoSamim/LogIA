@@ -121,39 +121,6 @@ export const QUERY_FIXED_QUESTIONS: QueryQuestionOption[] = [
   },
 ]
 
-export const QUERY_PANEL_SECTIONS: SidePanelSection[] = [
-  {
-    title: 'Versão de teste',
-    content: (
-      <div className="rounded-[10px] border border-amber-400/20 bg-amber-400/6 px-3.5 py-3.5">
-        <div className="flex items-start gap-2.5">
-          <svg className="mt-0.5 shrink-0 text-amber-300/80" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-          <p className="text-[11px] leading-[1.6] text-white/56">
-            Esta versão <span className="font-semibold text-amber-300/80">não usa uma LLM real</span>. As respostas são geradas por um backend mock sem RAG ou modelo de linguagem. Versão sem integração com dados reais, apenas para testes de interface e experiência.
-          </p>
-        </div>
-      </div>
-    ),
-  },
-  {
-    title: 'Perguntas disponíveis',
-    content: (
-      <div className="space-y-2.5">
-        {QUERY_FIXED_QUESTIONS.map((item) => (
-          <div key={item.key} className="rounded-xl border border-white/6 bg-surface-base/64 px-3 py-3">
-            <p className="text-[11px] font-semibold text-white/78">{item.label}</p>
-            <p className="mt-1 text-[11px] leading-5 text-white/40">{item.helper}</p>
-          </div>
-        ))}
-      </div>
-    ),
-  },
-]
-
 export const PROJECT_QUESTIONS: ProjectQuestion[] = [
   {
     field: 'name',

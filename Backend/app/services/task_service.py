@@ -17,6 +17,7 @@ settings = get_settings()
 
 ALLOWED_MIME_TYPES = {
     "application/pdf",
+    "text/plain",
     "image/jpeg",
     "image/png",
     "image/gif",
@@ -340,7 +341,7 @@ async def create_attachment(
     if mime not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Tipo de arquivo não permitido: {mime}. Use PDF ou imagem.",
+            detail=f"Tipo de arquivo não permitido: {mime}. Use PDF, TXT ou imagem.",
         )
 
     content = await file.read()
@@ -358,7 +359,12 @@ async def create_attachment(
     dest = upload_dir / unique_name
     dest.write_bytes(content)
 
-    file_type = "pdf" if mime == "application/pdf" else "image"
+    if mime == "application/pdf":
+        file_type = "pdf"
+    elif mime == "text/plain":
+        file_type = "text"
+    else:
+        file_type = "image"
     file_url = f"/files/{unique_name}"
 
     att = TaskAttachment(

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { ProjectAttachmentDTO } from '@/data/dtos'
+import AttachmentPreviewModal from '@/components/ui/AttachmentPreviewModal'
 import { projectService } from '@/services/project.service'
 import { buildFileUrl } from '@/services/api'
 
@@ -44,6 +45,7 @@ export default function ProjectAttachments({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [previewAttachment, setPreviewAttachment] = useState<ProjectAttachmentDTO | null>(null)
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -103,6 +105,7 @@ export default function ProjectAttachments({
             ref={fileInputRef}
             type="file"
             className="sr-only"
+            accept="application/pdf,text/plain,image/*"
             onChange={(e) => { void handleUpload(e) }}
             disabled={uploading}
           />
@@ -143,14 +146,13 @@ export default function ProjectAttachments({
                         )}
                       </button>
                     </div>
-                    <a
-                      href={buildFileUrl(att.file_url)}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => setPreviewAttachment(att)}
                       className="self-start rounded-[6px] bg-black/60 px-2 py-1 text-[10px] font-medium text-white/80 backdrop-blur-sm"
                     >
-                      Abrir
-                    </a>
+                      Visualizar
+                    </button>
                   </div>
                 </>
               ) : (
@@ -179,18 +181,30 @@ export default function ProjectAttachments({
                     <p className="mt-0.5 text-[10px] text-white/28">{formatFileSize(att.file_size)}</p>
                   </div>
 
-                  <a
-                    href={buildFileUrl(att.file_url)}
-                    target="_blank"
-                    rel="noreferrer"
-                    download={att.file_name}
-                    className="mt-1 flex items-center gap-1 text-[10px] font-medium text-accent-indigo/60 transition-[color] duration-150 hover:text-accent-indigo/90"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                      <path d="M5 1v6M2 5l3 3 3-3M1 9h8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Download
-                  </a>
+                  <div className="mt-1 flex items-center gap-3 text-[10px] font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewAttachment(att)}
+                      className="flex items-center gap-1 text-accent-indigo/60 transition-[color] duration-150 hover:text-accent-indigo/90"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M1 5s1.5-2.5 4-2.5S9 5 9 5 7.5 7.5 5 7.5 1 5 1 5Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="5" cy="5" r="1.2" stroke="currentColor" strokeWidth="1.2" />
+                      </svg>
+                      Visualizar
+                    </button>
+                    <a
+                      href={buildFileUrl(att.file_url)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-white/42 transition-[color] duration-150 hover:text-white/74"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M3 1h6v6M9 1 4.5 5.5M1 3.5V9h5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Nova aba
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
@@ -199,6 +213,11 @@ export default function ProjectAttachments({
       ) : (
         <p className="mt-3 text-center text-xs text-white/18">Nenhum arquivo anexado</p>
       )}
+
+      <AttachmentPreviewModal
+        attachment={previewAttachment}
+        onClose={() => setPreviewAttachment(null)}
+      />
     </div>
   )
 }

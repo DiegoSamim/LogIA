@@ -261,7 +261,16 @@ export default function Tasks() {
                         ) : null}
                       </TimelineSeparator>
 
-                      <TimelineContent sx={{ py: 0, pr: 0, pl: { xs: 2.5, sm: 3 }, mb: index < filteredTasks.length - 1 ? 1.5 : 0 }}>
+                      <TimelineContent
+                        sx={{
+                          py: 0,
+                          pr: 0,
+                          pl: { xs: 2.5, sm: 3 },
+                          mb: index < filteredTasks.length - 1 ? 1.5 : 0,
+                          minWidth: 0,
+                          width: '100%',
+                        }}
+                      >
                         <TaskCard task={task} onClick={() => navigate(`/tasks/${task.id}`)} />
                       </TimelineContent>
                     </TimelineItem>

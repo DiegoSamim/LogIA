@@ -2,11 +2,13 @@ import { useRef, useState } from 'react'
 import type { AttachmentUploadState } from '@/pages/Chat/types'
 import { taskService } from '@/services/task.service'
 
-const ACCEPTED_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+const ACCEPTED_MIME = ['application/pdf', 'text/plain', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
 const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 
-function getFileType(file: File): 'pdf' | 'image' {
-  return file.type === 'application/pdf' ? 'pdf' : 'image'
+function getFileType(file: File): 'pdf' | 'image' | 'text' {
+  if (file.type === 'application/pdf') return 'pdf'
+  if (file.type === 'text/plain') return 'text'
+  return 'image'
 }
 
 function formatSize(bytes: number): string {
@@ -15,11 +17,18 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function FileIcon({ type }: { type: 'pdf' | 'image' }) {
+function FileIcon({ type }: { type: 'pdf' | 'image' | 'text' }) {
   if (type === 'pdf') {
     return (
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-red-400/20 bg-red-400/10">
         <span className="text-[9px] font-bold tracking-wider text-red-300">PDF</span>
+      </div>
+    )
+  }
+  if (type === 'text') {
+    return (
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-sky-400/20 bg-sky-400/10">
+        <span className="text-[9px] font-bold tracking-wider text-sky-300">TXT</span>
       </div>
     )
   }
@@ -160,14 +169,14 @@ export default function AttachmentUploadStep({
           <polyline points="17 8 12 3 7 8" />
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
-        <p className="text-xs text-white/36">Solte PDFs ou imagens aqui</p>
+        <p className="text-xs text-white/36">Solte PDFs, TXTs ou imagens aqui</p>
         <p className="text-[10px] text-white/20">ou clique para selecionar · máx. 10 MB por arquivo</p>
       </div>
 
       <input
         ref={inputRef}
         type="file"
-        accept="application/pdf,image/*"
+        accept="application/pdf,text/plain,image/*"
         multiple
         className="hidden"
         onChange={handleInputChange}

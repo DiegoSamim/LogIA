@@ -2,6 +2,7 @@ import type { ChecklistItem, ProjectMemberLookup, TaskRegisterQuestion } from '@
 import ChecklistInput from './ChecklistInput'
 import EnumChipSelector from './EnumChipSelector'
 import MemberMultiSelect from './MemberMultiSelect'
+import AutoResizeTextarea from '@/components/ui/AutoResizeTextarea'
 import StackAutocomplete from '@/components/ui/StackAutocomplete'
 
 interface Props {
@@ -98,12 +99,13 @@ export default function TaskQuestionInput({
             )}
 
             {isText && (
-              <textarea
+              <AutoResizeTextarea
                 rows={1}
                 value={textValue}
                 onChange={(e) => onTextChange(e.target.value)}
                 placeholder={question.placeholder}
-                className="min-h-12 w-full resize-none overflow-hidden rounded-[18px] border border-white/7 bg-surface-base/88 px-4 py-3 text-sm leading-6 text-white/86 outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-white/24 focus:border-accent-indigo/38 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
+                maxHeight={224}
+                className="min-h-12 w-full resize-none rounded-[18px] border border-white/7 bg-surface-base/88 px-4 py-3 text-sm leading-6 text-white/86 outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-white/24 focus:border-accent-indigo/38 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
                 onKeyDown={handleKeyDown}
               />
             )}

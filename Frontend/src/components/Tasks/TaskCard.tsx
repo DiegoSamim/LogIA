@@ -20,16 +20,16 @@ export default function TaskCard({ task, onClick }: { task: TaskDTO; onClick?: (
   return (
     <article
       onClick={onClick}
-      className={`rounded-[20px] border border-white/7 bg-[linear-gradient(180deg,rgba(19,22,30,0.94),rgba(16,18,24,0.98))] px-4 py-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.14)] transition-[border-color,background-color] duration-150 hover:border-white/14 hover:bg-surface-container/94 sm:px-5${onClick ? ' cursor-pointer' : ''}`}
+      className={`min-w-0 max-w-full rounded-[20px] border border-white/7 bg-[linear-gradient(180deg,rgba(19,22,30,0.94),rgba(16,18,24,0.98))] px-4 py-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.14)] transition-[border-color,background-color] duration-150 hover:border-white/14 hover:bg-surface-container/94 sm:px-5${onClick ? ' cursor-pointer' : ''}`}
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-base font-semibold tracking-tight text-white/94">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h3 className="min-w-0 break-words text-base font-semibold tracking-tight text-white/94">
               {task.title}
             </h3>
             {task.feature_or_ticket ? (
-              <span className="rounded-full border border-accent-indigo/18 bg-accent-indigo/8 px-2.5 py-0.5 font-mono text-[10px] text-accent-indigo/78">
+              <span className="max-w-full rounded-full border border-accent-indigo/18 bg-accent-indigo/8 px-2.5 py-0.5 font-mono text-[10px] break-all text-accent-indigo/78">
                 {task.feature_or_ticket}
               </span>
             ) : null}
@@ -49,7 +49,7 @@ export default function TaskCard({ task, onClick }: { task: TaskDTO; onClick?: (
             {visibleTags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-white/8 bg-surface-base/56 px-2.5 py-0.5 text-[10px] text-white/52"
+                className="max-w-full rounded-full border border-white/8 bg-surface-base/56 px-2.5 py-0.5 text-[10px] break-all text-white/52"
               >
                 {tag}
               </span>
@@ -68,22 +68,22 @@ export default function TaskCard({ task, onClick }: { task: TaskDTO; onClick?: (
           ) : null}
         </div>
 
-        <aside className="flex shrink-0 items-center gap-5 lg:min-w-[228px] lg:justify-end">
-          <div className="text-right">
+        <aside className="grid grid-cols-2 gap-4 border-t border-white/6 pt-3 sm:max-w-[320px] sm:self-end xl:shrink-0 xl:border-t-0 xl:pt-0">
+          <div className="min-w-0 text-left xl:text-right">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/24">
               Status
             </p>
-            <p className={`mt-1 flex items-center justify-end gap-2 text-sm font-semibold ${TASK_STATUS_META[task.status].subtleClass}`}>
+            <p className={`mt-1 flex items-center gap-2 text-sm font-semibold xl:justify-end ${TASK_STATUS_META[task.status].subtleClass}`}>
               <span className={`h-2 w-2 rounded-full ${TASK_STATUS_META[task.status].dotClass.split(' ')[0]}`} />
               {statusOption?.label ?? task.status}
             </p>
           </div>
 
-          <div className="text-right">
+          <div className="min-w-0 text-left xl:text-right">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/24">
               Data
             </p>
-            <p className="mt-1 text-sm font-semibold text-white/76">
+            <p className="mt-1 break-words text-sm font-semibold text-white/76">
               {formatAbsoluteDate(task.created_at)}
             </p>
           </div>

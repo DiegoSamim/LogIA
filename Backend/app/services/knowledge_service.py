@@ -15,9 +15,20 @@ if TYPE_CHECKING:
     from app.models.task import Task, TaskUpdate
 
 
+# Deve coincidir com Vector(N) em KnowledgeChunk.embedding e AI_EMBEDDING_DIM no .env.
+# Alterar exige migração Alembic + re-embed de todos os chunks.
 KNOWLEDGE_EMBEDDING_DIM = 1536
+
+# Dois tipos de fonte para os chunks:
+# - task_snapshot: representa o estado completo da tarefa em um dado momento
+# - task_update: representa um evento/atualização específico (bloqueio, progresso...)
 TASK_SNAPSHOT_SOURCE = "task_snapshot"
 TASK_UPDATE_SOURCE = "task_update"
+
+# Tamanho máximo de cada chunk em caracteres.
+# Chunks menores = mais precisos na busca, mas perdem contexto entre parágrafos.
+# Chunks maiores = mais contexto, mas o embedding captura menos a essência.
+# 700 é um bom equilíbrio para textos técnicos de tarefas.
 MAX_CHUNK_LENGTH = 700
 TOKEN_RE = re.compile(r"[a-zA-Z0-9_]+", re.UNICODE)
 
@@ -115,6 +126,34 @@ def embed_text(text: str, dim: int = KNOWLEDGE_EMBEDDING_DIM) -> list[float]:
     if norm == 0:
         return vector
     return [value / norm for value in vector]
+
+
+async def aembed_text(text: str, dim: int = KNOWLEDGE_EMBEDDING_DIM) -> list[float]:
+    """Wrapper assíncrono de embedding com degradação graciosa.
+
+    Hierarquia de fallback:
+    1. AI_ENABLED=False  → blake2b local (sem rede, sem custo)
+    2. Provedor AI_PROVIDER (Gemini/Ollama) → embedding semântico real
+    3. AIProviderError   → blake2b local (provedor falhou, tarefa não fica bloqueada)
+
+    Imports internos evitam importação circular entre knowledge_service ↔ ai/*.
+    Esses módulos se referenciam mutuamente; importar no topo causaria ImportError.
+    """
+    from app.ai.providers.base import AIProviderError
+    from app.ai.registry import get_embedding_provider
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    if not settings.AI_ENABLED:
+        return embed_text(text, dim=dim)
+
+    provider = get_embedding_provider()
+    try:
+        return await provider.embed(text)
+    except AIProviderError:
+        # Falha silenciosa: a tarefa é salva com embedding blake2b.
+        # O script reembed.py pode corrigir esse chunk posteriormente.
+        return embed_text(text, dim=dim)
 
 
 def _build_task_snapshot_text(task: "Task") -> str:
@@ -237,11 +276,12 @@ async def reindex_task_snapshot(db: AsyncSession, task: "Task") -> None:
                 task_update_id=None,
                 source_type=TASK_SNAPSHOT_SOURCE,
                 content=content,
-                embedding=embed_text(content),
+                embedding=await aembed_text(content),
                 chunk_metadata={
                     "entity": "task",
                     "task_title": task.title,
                     "task_status": task.status,
+                    "task_category": _stringify_value(task.category) or None,
                     "chunk_index": index,
                     "chunk_total": len(chunks),
                 },
@@ -264,10 +304,12 @@ async def index_task_update(db: AsyncSession, task: "Task", update: "TaskUpdate"
                 task_update_id=update.id,
                 source_type=TASK_UPDATE_SOURCE,
                 content=content,
-                embedding=embed_text(content),
+                embedding=await aembed_text(content),
                 chunk_metadata={
                     "entity": "task_update",
                     "task_title": task.title,
+                    "task_status": update.new_status or update.old_status or task.status,
+                    "task_category": _stringify_value(task.category) or None,
                     "update_type": update.update_type,
                     "old_status": update.old_status,
                     "new_status": update.new_status,

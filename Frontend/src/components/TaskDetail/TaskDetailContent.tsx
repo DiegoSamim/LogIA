@@ -1,4 +1,5 @@
 import type { TaskDTO, UpdateTaskRequest } from '@/data/dtos'
+import AutoResizeTextarea from '@/components/ui/AutoResizeTextarea'
 
 interface Props {
   task: TaskDTO
@@ -54,11 +55,12 @@ export default function TaskDetailContent({ task, isEditing, draft, onDraftChang
     <div className="space-y-3">
       <Section label="Resumo da tarefa">
         {isEditing ? (
-          <textarea
+          <AutoResizeTextarea
             rows={4}
             value={draft.what_was_done ?? ''}
             onChange={(e) => onDraftChange({ what_was_done: e.target.value })}
             placeholder="Descreva de forma geral e estável o objetivo ou entrega principal da tarefa..."
+            maxHeight={280}
             className={textareaClass}
           />
         ) : task.what_was_done ? (
@@ -71,11 +73,12 @@ export default function TaskDetailContent({ task, isEditing, draft, onDraftChang
       {/* Abordagem técnica */}
       <Section label="Abordagem técnica">
         {isEditing ? (
-          <textarea
+          <AutoResizeTextarea
             rows={4}
             value={draft.technical_approach ?? ''}
             onChange={(e) => onDraftChange({ technical_approach: e.target.value })}
             placeholder="Como foi implementado, decisões técnicas, padrões utilizados..."
+            maxHeight={280}
             className={textareaClass}
           />
         ) : task.technical_approach ? (
@@ -88,11 +91,12 @@ export default function TaskDetailContent({ task, isEditing, draft, onDraftChang
       {/* Próximos passos */}
       <Section label="Próximos passos">
         {isEditing ? (
-          <textarea
+          <AutoResizeTextarea
             rows={3}
             value={draft.next_steps ?? ''}
             onChange={(e) => onDraftChange({ next_steps: e.target.value })}
             placeholder="O que deve ser feito a seguir..."
+            maxHeight={280}
             className={textareaClass}
           />
         ) : task.next_steps ? (
@@ -106,11 +110,12 @@ export default function TaskDetailContent({ task, isEditing, draft, onDraftChang
       {showBlocked ? (
         <Section label="Motivo do bloqueio" accent="text-orange-300/60">
           {isEditing ? (
-            <textarea
+            <AutoResizeTextarea
               rows={3}
               value={draft.blocked_reason ?? ''}
               onChange={(e) => onDraftChange({ blocked_reason: e.target.value })}
               placeholder="Descreva o que está impedindo o progresso..."
+              maxHeight={280}
               className={`${textareaClass} border-orange-400/14 focus:border-orange-400/30 focus:ring-orange-400/10`}
             />
           ) : task.blocked_reason ? (

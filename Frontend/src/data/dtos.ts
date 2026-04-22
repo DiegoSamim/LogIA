@@ -324,6 +324,149 @@ export interface ChatSessionDTO {
   latest_query_run?: QueryRunDTO | null
 }
 
+export type QueryAnswerTone = 'default' | 'accent' | 'success' | 'warning' | 'danger' | 'muted'
+
+export type QueryAnswerSectionType =
+  | 'highlights'
+  | 'task_cards'
+  | 'timeline'
+  | 'status_list'
+  | 'blocker_cards'
+  | 'executive_summary'
+  | 'bullet_list'
+  | 'rich_text'
+  | 'empty_state'
+
+export interface QueryAnswerInsight {
+  label: string
+  value: string
+  tone?: QueryAnswerTone
+  icon_key?: string | null
+}
+
+export interface QueryAnswerReference {
+  id: string
+  chunk_id?: string | null
+  task_id?: string | null
+  task_update_id?: string | null
+  task_title?: string | null
+  task_status?: string | null
+  source_type?: string | null
+  update_type?: string | null
+  preview?: string | null
+}
+
+export interface QueryAnswerSectionItem {
+  id?: string
+  title?: string
+  subtitle?: string
+  description?: string
+  eyebrow?: string
+  badge?: string
+  label?: string
+  value?: string
+  text?: string
+  content?: string
+  status?: string | null
+  status_label?: string | null
+  source_label?: string | null
+  summary?: string | null
+  tone?: QueryAnswerTone
+  causes?: string[]
+  impacts?: string[]
+  actions?: string[]
+  days_blocked?: number
+  severity?: 'critical' | 'high' | 'medium' | 'low' | string
+  severity_label?: string
+  maturity_label?: string
+  bottleneck?: string
+  recommendation?: string
+}
+
+export interface QueryAnswerSection {
+  id: string
+  type: QueryAnswerSectionType
+  title: string
+  subtitle?: string
+  items: QueryAnswerSectionItem[]
+  collapsed?: boolean
+  accent?: QueryAnswerTone
+}
+
+export interface QueryAnswerPayload {
+  presentation_version: number
+  answer_kind: string
+  title: string
+  summary: string
+  insights: QueryAnswerInsight[]
+  sections: QueryAnswerSection[]
+  references: QueryAnswerReference[]
+}
+
+export interface QueryPanelMetric {
+  label: string
+  value: string | number
+  tone?: QueryAnswerTone
+  percent?: number
+}
+
+export interface QueryPanelChip {
+  label: string
+  tone?: QueryAnswerTone
+}
+
+export interface QueryPanelGroupItem {
+  label: string
+  value?: string | number | null
+  tone?: QueryAnswerTone
+  preview?: string | null
+  percent?: number
+  task_id?: string | null
+  source_type?: string | null
+  update_type?: string | null
+  source_label?: string | null
+  severity?: 'critical' | 'high' | 'medium' | 'low' | string | null
+  severity_label?: string | null
+  days_blocked?: number | null
+  priority?: string | null
+}
+
+export interface QueryPanelGroup {
+  title: string
+  type: 'distribution' | 'source_list' | 'tag_list' | 'metric_list'
+  items: QueryPanelGroupItem[]
+}
+
+export interface QueryPanelPayload {
+  presentation_version: number
+  panel_kind: string
+  title: string
+  summary_metric: QueryPanelMetric
+  metrics: QueryPanelMetric[]
+  chips: QueryPanelChip[]
+  groups: QueryPanelGroup[]
+}
+
+export interface ChatMessageMetadata extends Record<string, unknown> {
+  answer_payload?: QueryAnswerPayload
+  panel_payload?: QueryPanelPayload
+  references?: QueryAnswerReference[]
+  answer_source?: 'ai' | 'mock' | string
+  ai_used?: boolean
+  ai_trace?: Record<string, unknown>
+  question_key?: string
+}
+
+export interface QueryRunResultMetadata extends Record<string, unknown> {
+  answer_payload?: QueryAnswerPayload
+  panel_payload?: QueryPanelPayload
+  references?: QueryAnswerReference[]
+  presentation_version?: number
+  answer_source?: 'ai' | 'mock' | string
+  ai_used?: boolean
+  ai_trace?: Record<string, unknown>
+}
+
 /**
  * DTO de mensagem de chat (`chat_messages`).
  * Representa uma mensagem dentro de uma ChatSession.
@@ -334,7 +477,7 @@ export interface ChatMessageDTO {
   sender: Sender                          // source: chat_messages.sender
   message_type: string                    // source: chat_messages.message_type
   content: string                         // source: chat_messages.content
-  metadata: Record<string, unknown> | null // source: chat_messages.metadata (JSONB)
+  metadata: ChatMessageMetadata | null    // source: chat_messages.metadata (JSONB)
   created_at: string                      // source: chat_messages.created_at
 }
 
@@ -347,7 +490,7 @@ export interface QueryRunDTO {
   question_key: string
   question_text: string
   error_message: string | null
-  result_metadata: Record<string, unknown> | null
+  result_metadata: QueryRunResultMetadata | null
   started_at: string | null
   completed_at: string | null
   cancelled_at: string | null
@@ -364,7 +507,7 @@ export interface CreateChatMessageRequest {
   sender: Sender
   message_type?: string
   content: string
-  metadata?: Record<string, unknown> | null
+  metadata?: ChatMessageMetadata | null
 }
 
 export interface StartQueryRunRequest {

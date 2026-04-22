@@ -11,6 +11,7 @@ import LogoAvatar from '@/components/chat/LogoAvatar'
 import SidePanel from '@/components/chat/SidePanel'
 import AttachmentUploadStep from '@/pages/Chat/components/AttachmentUploadStep'
 import { useNavigate } from 'react-router-dom'
+import AutoResizeTextarea from '@/components/ui/AutoResizeTextarea'
 
 function ProjectSummaryCard({
   draft,
@@ -120,26 +121,11 @@ export default function NewProjectFlow({
   const [phase, setPhase] = useState<'questions' | 'summary' | 'saving' | 'attachments' | 'done'>('questions')
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null)
   const [projectInput, setProjectInput] = useState('')
-  const projectTextareaRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [projectMessages, phase])
-
-  useEffect(() => {
-    const el = projectTextareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 160) + 'px'
-  }, [projectInput])
-
-  function handleProjectInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    setProjectInput(e.target.value)
-    const el = e.target
-    el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 160) + 'px'
-  }
 
   function submitProjectStackAnswer(selected: string[] | null) {
     const value = selected?.filter(Boolean) ?? []
@@ -186,7 +172,6 @@ export default function NewProjectFlow({
     setProjectDraft(updated)
 
     setProjectInput('')
-    if (projectTextareaRef.current) projectTextareaRef.current.style.height = 'auto'
 
     const nextStep = step + 1
     if (nextStep < PROJECT_QUESTIONS.length) {
@@ -376,13 +361,13 @@ export default function NewProjectFlow({
                     />
                   </div>
                 ) : (
-                  <textarea
-                    ref={projectTextareaRef}
+                  <AutoResizeTextarea
                     rows={1}
                     value={projectInput}
-                    onChange={handleProjectInputChange}
+                    onChange={(e) => setProjectInput(e.target.value)}
                     placeholder={currentQ.placeholder}
-                    className="min-h-11 flex-1 resize-none overflow-hidden rounded-[18px] border border-white/7 bg-surface-base/88 px-4 py-3 text-sm leading-6 text-white/86 outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-white/24 focus:border-accent-indigo/38 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
+                    maxHeight={224}
+                    className="min-h-11 flex-1 resize-none rounded-[18px] border border-white/7 bg-surface-base/88 px-4 py-3 text-sm leading-6 text-white/86 outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-white/24 focus:border-accent-indigo/38 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)]"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault()

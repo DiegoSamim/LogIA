@@ -102,6 +102,12 @@ export const QUERY_FIXED_QUESTIONS: QueryQuestionOption[] = [
     color: '#6366F1',
   },
   {
+    key: 'daily-progress',
+    label: 'O que fiz hoje?',
+    helper: 'Consolida os registros e highlights das últimas 24 horas.',
+    color: '#14B8A6',
+  },
+  {
     key: 'recorded-blockers',
     label: 'Quais bloqueios já registrei?',
     helper: 'Recupera impedimentos documentados no histórico técnico.',

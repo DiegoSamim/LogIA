@@ -28,6 +28,7 @@ import {
   TaskFiltersBar,
   TaskStatsBar,
   TasksEmptyState,
+  TasksKanban,
 } from '@/components/Tasks'
 import {
   EMPTY_TASK_FILTERS,
@@ -46,6 +47,7 @@ export default function Tasks() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<TaskFilterState>(EMPTY_TASK_FILTERS)
+  const [viewMode, setViewMode] = useState<'timeline' | 'kanban'>('timeline')
   const visibleTasks = useMemo(() => (projectId ? tasks : []), [projectId, tasks])
 
   useEffect(() => {
@@ -153,6 +155,22 @@ export default function Tasks() {
     setFilters(EMPTY_TASK_FILTERS)
   }
 
+  async function handleStatusChange(taskId: string, newStatus: TaskStatus) {
+    const prev = tasks.find((t) => t.id === taskId)
+    if (!prev) return
+
+    setTasks((current) =>
+      current.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
+    )
+
+    try {
+      const { data } = await taskService.update(taskId, { status: newStatus })
+      setTasks((current) => current.map((t) => (t.id === taskId ? data : t)))
+    } catch {
+      setTasks((current) => current.map((t) => (t.id === taskId ? prev : t)))
+    }
+  }
+
   return (
     <div className="min-h-full overflow-y-auto bg-surface-base">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 xl:px-8">
@@ -203,6 +221,48 @@ export default function Tasks() {
 
           {!loading && visibleTasks.length > 0 ? <TaskStatsBar stats={stats} /> : null}
 
+          {!loading && filteredTasks.length > 0 ? (
+            <div className="flex items-center justify-end gap-1 rounded-[8px] border border-white/6 bg-surface-container/60 p-1 self-end w-fit ml-auto">
+              <button
+                type="button"
+                onClick={() => setViewMode('timeline')}
+                title="Linha do tempo"
+                className={[
+                  'flex h-7 w-7 items-center justify-center rounded-[6px] transition-[background-color,color] duration-150',
+                  viewMode === 'timeline'
+                    ? 'bg-surface-high text-white/82'
+                    : 'text-white/32 hover:text-white/58',
+                ].join(' ')}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                  <circle cx="2.5" cy="3.5" r="1.5" fill="currentColor" stroke="none" />
+                  <circle cx="2.5" cy="7" r="1.5" fill="currentColor" stroke="none" />
+                  <circle cx="2.5" cy="10.5" r="1.5" fill="currentColor" stroke="none" />
+                  <line x1="5.5" y1="3.5" x2="12" y2="3.5" />
+                  <line x1="5.5" y1="7" x2="12" y2="7" />
+                  <line x1="5.5" y1="10.5" x2="12" y2="10.5" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('kanban')}
+                title="Board Kanban"
+                className={[
+                  'flex h-7 w-7 items-center justify-center rounded-[6px] transition-[background-color,color] duration-150',
+                  viewMode === 'kanban'
+                    ? 'bg-surface-high text-white/82'
+                    : 'text-white/32 hover:text-white/58',
+                ].join(' ')}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="1" width="3.5" height="12" rx="1" />
+                  <rect x="5.25" y="1" width="3.5" height="8" rx="1" />
+                  <rect x="9.5" y="1" width="3.5" height="10" rx="1" />
+                </svg>
+              </button>
+            </div>
+          ) : null}
+
           {loading ? (
             <div className="flex items-center justify-center rounded-[24px] border border-white/6 bg-surface-container/52 py-24">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-accent-indigo/70" />
@@ -217,6 +277,11 @@ export default function Tasks() {
               hasFilters={hasActiveFilters}
               onGoToChat={() => navigate('/chat')}
               onClearFilters={clearFilters}
+            />
+          ) : viewMode === 'kanban' ? (
+            <TasksKanban
+              tasks={filteredTasks}
+              onStatusChange={handleStatusChange}
             />
           ) : (
             <section className="rounded-[28px] border border-white/7 bg-[linear-gradient(180deg,rgba(15,17,22,0.98),rgba(10,12,16,0.98))] p-3 shadow-[0_18px_48px_rgba(0,0,0,0.2)] sm:p-4">

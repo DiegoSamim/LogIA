@@ -2,6 +2,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import cast, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 # Constantes espelhadas de knowledge_service para evitar importação circular.
 TASK_SNAPSHOT_SOURCE = "task_snapshot"
 TASK_UPDATE_SOURCE = "task_update"
+APP_TIMEZONE = ZoneInfo("America/Sao_Paulo")
 
 
 def _truncate(value: str | None, limit: int = 220) -> str:
@@ -30,6 +32,13 @@ def _truncate(value: str | None, limit: int = 220) -> str:
     if len(normalized) <= limit:
         return normalized
     return f"{normalized[: limit - 1].rstrip()}..."
+
+
+def _today_bounds_utc() -> tuple[datetime, datetime]:
+    today = datetime.now(APP_TIMEZONE).date()
+    start_local = datetime.combine(today, datetime.min.time(), tzinfo=APP_TIMEZONE)
+    end_local = start_local + timedelta(days=1)
+    return start_local.astimezone(timezone.utc), end_local.astimezone(timezone.utc)
 
 
 STATUS_LABELS = {
@@ -55,13 +64,21 @@ def _chunk_to_prompt_dict(
         metadata["task_status"] = task.status
         metadata["task_category"] = task.category
         metadata["task_priority"] = task.priority
+        metadata["task_updated_at"] = task.updated_at.isoformat() if task.updated_at else None
+        metadata["task_created_at"] = task.created_at.isoformat() if task.created_at else None
 
     return {
         "id": str(chunk.id),
         "content": chunk.content,
         "metadata": metadata,
         "source_type": chunk.source_type,
-        "updated_at": chunk.updated_at.isoformat() if chunk.updated_at else None,
+        "updated_at": (
+            task.updated_at.isoformat()
+            if task and task.updated_at
+            else chunk.updated_at.isoformat()
+            if chunk.updated_at
+            else None
+        ),
     }
 
 
@@ -1010,7 +1027,7 @@ def _normalize_weekly_payload(
             section
             for section in sections
             if isinstance(section, dict)
-            and section.get("id") == "weekly-insight"
+            and section.get("id") in {"weekly-insight", "daily-insight"}
             and section.get("type") == "bullet_list"
         ][:1]
 
@@ -1071,7 +1088,7 @@ def _normalize_weekly_payload(
     generated_sections = [
         *category_sections,
         {
-            "id": "weekly-timeline",
+            "id": "daily-timeline" if normalized.get("answer_kind") == "daily_progress" else "weekly-timeline",
             "type": "timeline",
             "title": "Linha do tempo",
             "items": timeline_items,
@@ -1082,7 +1099,7 @@ def _normalize_weekly_payload(
     if blocked_tasks:
         generated_sections.append(
             {
-                "id": "weekly-bottlenecks",
+                "id": "daily-bottlenecks" if normalized.get("answer_kind") == "daily_progress" else "weekly-bottlenecks",
                 "type": "status_list",
                 "title": "Gargalos identificados",
                 "items": [
@@ -1161,17 +1178,33 @@ async def _fetch_intent_chunks(
     if query_embedding is None:
         return []
 
-    if question_key == "weekly-progress":
-        # Tenta primeiro os últimos 7 dias para priorizar atividade recente.
-        # Se não houver chunks nesse período, cai para busca semântica geral.
-        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    if question_key == "daily-progress":
+        start_utc, end_utc = _today_bounds_utc()
         result = await db.execute(
             select(KnowledgeChunk)
+            .join(Task, KnowledgeChunk.task_id == Task.id)
             .where(
                 KnowledgeChunk.project_id == project_id,
-                KnowledgeChunk.updated_at >= seven_days_ago,
+                Task.updated_at >= start_utc,
+                Task.updated_at < end_utc,
             )
-            .order_by(KnowledgeChunk.updated_at.desc())
+            .order_by(Task.updated_at.desc(), KnowledgeChunk.updated_at.desc())
+            .limit(limit * 2)
+        )
+        return list(result.scalars().all())
+
+    if question_key == "weekly-progress":
+        # Tenta primeiro o período da pergunta para priorizar atividade recente.
+        # Se não houver chunks nesse período, cai para busca semântica geral.
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        result = await db.execute(
+            select(KnowledgeChunk)
+            .join(Task, KnowledgeChunk.task_id == Task.id)
+            .where(
+                KnowledgeChunk.project_id == project_id,
+                Task.updated_at >= cutoff,
+            )
+            .order_by(Task.updated_at.desc(), KnowledgeChunk.updated_at.desc())
             .limit(limit * 2)
         )
         chunks = list(result.scalars().all())
@@ -1231,6 +1264,40 @@ async def generate_query_answer(
     task_lookup = await _load_task_lookup(db, chunks)
     _enrich_chunks_with_task_metadata(chunks, task_lookup)
 
+    if question_key == "daily-progress" and not chunks:
+        payload = {
+            "presentation_version": 1,
+            "answer_kind": "daily_progress",
+            "title": "Ainda sem panorama diário",
+            "summary": "Ainda nao ha registros de hoje para consolidar um relatório diário deste projeto.",
+            "insights": [],
+            "sections": [
+                {
+                    "id": "empty-state",
+                    "type": "empty_state",
+                    "title": "Poucos registros recentes",
+                    "items": [
+                        {
+                            "title": "Poucos registros recentes",
+                            "description": "Registre tarefas ou updates hoje para que a consulta consiga consolidar um panorama diario util.",
+                        }
+                    ],
+                    "accent": "muted",
+                }
+            ],
+            "references": [],
+        }
+        panel_payload = build_query_panel_payload(
+            question_key=question_key,
+            answer_payload=payload,
+            references=[],
+            chunks=[],
+            chunks_retrieved=0,
+            cited_chunk_ids=None,
+            ai_used=False,
+        )
+        return payload, panel_payload, [], payload["summary"]
+
     # Passo 3: serialização dos chunks para o prompt
     prompt_chunks = [_chunk_to_prompt_dict(chunk, task_lookup) for chunk in chunks]
 
@@ -1253,7 +1320,7 @@ async def generate_query_answer(
         payload = _normalize_blockers_payload(payload, chunks, task_lookup)
     if question_key == "technical-summary":
         payload = _normalize_technical_payload(payload, chunks, task_lookup)
-    if question_key == "weekly-progress":
+    if question_key in {"weekly-progress", "daily-progress"}:
         payload = _normalize_weekly_payload(payload, chunks, task_lookup)
 
     # Passo 6: construção de referências com anti-alucinação

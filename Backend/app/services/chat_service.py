@@ -3,6 +3,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
 from sqlalchemy import cast, or_, select
@@ -38,6 +39,7 @@ RUNNING_QUERY_TASKS: dict[str, asyncio.Task[None]] = {}
 
 QUERY_QUESTION_CATALOG: dict[str, str] = {
     "weekly-progress": "O que fiz essa semana?",
+    "daily-progress": "O que fiz hoje?",
     "recorded-blockers": "Quais bloqueios já registrei?",
     "technical-summary": "Resumo técnico do projeto",
     "open-tasks": "Tarefas ainda em aberto",
@@ -47,10 +49,18 @@ TERMINAL_RUN_STATUSES = {"completed", "failed", "cancelled"}
 ACTIVE_RUN_STATUSES = {"pending", "running"}
 PRESENTATION_VERSION = 1
 SECTION_ITEM_LIMIT = 5
+APP_TIMEZONE = ZoneInfo("America/Sao_Paulo")
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _today_bounds_utc() -> tuple[datetime, datetime]:
+    today = datetime.now(APP_TIMEZONE).date()
+    start_local = datetime.combine(today, datetime.min.time(), tzinfo=APP_TIMEZONE)
+    end_local = start_local + timedelta(days=1)
+    return start_local.astimezone(timezone.utc), end_local.astimezone(timezone.utc)
 
 
 def _touch_session(session: ChatSession) -> None:
@@ -95,6 +105,7 @@ def _source_label(source_type: str | None, update_type: str | None = None) -> st
 def _kind_for_question(question_key: str) -> str:
     return {
         "weekly-progress": "weekly_progress",
+        "daily-progress": "daily_progress",
         "recorded-blockers": "blockers",
         "technical-summary": "technical_summary",
         "open-tasks": "open_tasks",
@@ -481,16 +492,25 @@ def _task_update_label(update_type: str | None) -> str:
     }.get(update_type or "", "Atualização")
 
 
-def _build_weekly_progress_answer(tasks: list[Task]) -> tuple[dict[str, Any], list[dict[str, Any]], str]:
-    """Monta o relatório semanal diretamente a partir de objetos Task do banco.
+def _build_progress_answer(
+    tasks: list[Task],
+    *,
+    question_key: str,
+    report_title: str,
+    period_label: str,
+    empty_title: str,
+    empty_description: str,
+    section_prefix: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]], str]:
+    """Monta um relatório de progresso diretamente a partir de objetos Task do banco.
     Categoria, status, checkpoints e updates são campos indexáveis — sem parsing de chunks."""
     if not tasks:
         return _build_empty_answer(
-            question_key="weekly-progress",
-            title="Ainda sem panorama semanal",
-            summary="Ainda nao ha contexto suficiente para resumir a semana deste projeto.",
+            question_key=question_key,
+            title=empty_title,
+            summary=f"Ainda nao ha contexto suficiente para resumir {period_label} deste projeto.",
             empty_title="Poucos registros recentes",
-            empty_description="Registre mais tarefas ou updates para que a consulta consiga consolidar um panorama semanal util.",
+            empty_description=empty_description,
         )
 
     total = len(tasks)
@@ -509,10 +529,10 @@ def _build_weekly_progress_answer(tasks: list[Task]) -> tuple[dict[str, Any], li
     elif done_count == 0 and total > 0:
         insight_bullets.append("Nenhuma tarefa foi concluída no período analisado")
     else:
-        insight_bullets.append(f"{done_count} de {total} tarefa(s) concluída(s) nesta semana")
+        insight_bullets.append(f"{done_count} de {total} tarefa(s) concluída(s) {period_label}")
 
     sections.append({
-        "id": "weekly-insight",
+        "id": f"{section_prefix}-insight",
         "type": "bullet_list",
         "title": "Insight principal",
         "items": [{"text": t} for t in insight_bullets],
@@ -566,7 +586,7 @@ def _build_weekly_progress_answer(tasks: list[Task]) -> tuple[dict[str, Any], li
 
     if timeline_items:
         sections.append({
-            "id": "weekly-timeline",
+            "id": f"{section_prefix}-timeline",
             "type": "timeline",
             "title": "Linha do tempo",
             "items": timeline_items,
@@ -592,7 +612,7 @@ def _build_weekly_progress_answer(tasks: list[Task]) -> tuple[dict[str, Any], li
         })
     if bottleneck_items:
         sections.append({
-            "id": "weekly-bottlenecks",
+            "id": f"{section_prefix}-bottlenecks",
             "type": "status_list",
             "title": "Gargalos identificados",
             "items": bottleneck_items,
@@ -611,9 +631,9 @@ def _build_weekly_progress_answer(tasks: list[Task]) -> tuple[dict[str, Any], li
     ]
 
     payload = _make_answer_payload(
-        answer_kind=_kind_for_question("weekly-progress"),
-        title="Relatório semanal",
-        summary="Consolidei o progresso, categorias e gargalos da semana com base nos registros do projeto.",
+        answer_kind=_kind_for_question(question_key),
+        title=report_title,
+        summary=f"Consolidei o progresso, categorias e gargalos {period_label} com base nos registros do projeto.",
         insights=[
             {"label": "Tarefas tocadas", "value": str(total), "tone": "default", "icon_key": "tasks"},
             {"label": "Concluídas", "value": str(done_count), "tone": "success", "icon_key": "check"},
@@ -623,10 +643,34 @@ def _build_weekly_progress_answer(tasks: list[Task]) -> tuple[dict[str, Any], li
         sections=sections,
         references=references,
     )
-    fallback = f"Relatório semanal: {done_count} de {total} tarefa(s) concluída(s)."
+    fallback = f"{report_title}: {done_count} de {total} tarefa(s) concluída(s)."
     if blocked_tasks:
         fallback += f" {len(blocked_tasks)} tarefa(s) bloqueada(s)."
     return payload, _dedupe_references(references), fallback
+
+
+def _build_weekly_progress_answer(tasks: list[Task]) -> tuple[dict[str, Any], list[dict[str, Any]], str]:
+    return _build_progress_answer(
+        tasks,
+        question_key="weekly-progress",
+        report_title="Relatório semanal",
+        period_label="nesta semana",
+        empty_title="Ainda sem panorama semanal",
+        empty_description="Registre mais tarefas ou updates para que a consulta consiga consolidar um panorama semanal util.",
+        section_prefix="weekly",
+    )
+
+
+def _build_daily_progress_answer(tasks: list[Task]) -> tuple[dict[str, Any], list[dict[str, Any]], str]:
+    return _build_progress_answer(
+        tasks,
+        question_key="daily-progress",
+        report_title="Relatório diário",
+        period_label="hoje",
+        empty_title="Ainda sem panorama diário",
+        empty_description="Registre tarefas ou updates hoje para que a consulta consiga consolidar um panorama diario util.",
+        section_prefix="daily",
+    )
 
 
 def _build_technical_summary_answer(chunks: list[KnowledgeChunk]) -> tuple[dict[str, Any], list[dict[str, Any]], str]:
@@ -881,6 +925,27 @@ async def _build_mock_query_answer(
         )
         return answer_payload, panel_payload, references, fallback_text
 
+    if question_key == "daily-progress":
+        start_utc, end_utc = _today_bounds_utc()
+        result = await db.execute(
+            select(Task)
+            .where(Task.project_id == project_id, Task.updated_at >= start_utc, Task.updated_at < end_utc)
+            .options(selectinload(Task.checkpoints), selectinload(Task.updates))
+            .order_by(Task.updated_at.desc())
+        )
+        tasks = list(result.scalars().all())
+        answer_payload, references, fallback_text = _build_daily_progress_answer(tasks)
+        panel_payload = build_query_panel_payload(
+            question_key=question_key,
+            answer_payload=answer_payload,
+            references=references,
+            chunks=[],
+            chunks_retrieved=len(tasks),
+            cited_chunk_ids=None,
+            ai_used=False,
+        )
+        return answer_payload, panel_payload, references, fallback_text
+
     semantic_chunks = await search_by_project(db, project_id, embed_text(question_text), limit=6)
 
     if question_key == "technical-summary":
@@ -1032,6 +1097,7 @@ async def _execute_query_run(run_id: uuid.UUID) -> None:
             if not run or run.status == "cancelled":
                 return
 
+            exc_message = str(exc) or type(exc).__name__
             error_text = "A consulta falhou antes de produzir uma resposta."
             error_message = ChatMessage(
                 id=uuid.uuid4(),
@@ -1043,14 +1109,14 @@ async def _execute_query_run(run_id: uuid.UUID) -> None:
                     "run_id": str(run.id),
                     "question_key": run.question_key,
                     "status": "failed",
-                    "error_message": str(exc),
+                    "error_message": exc_message,
                 },
             )
             db.add(error_message)
             await db.flush()
 
             run.status = "failed"
-            run.error_message = str(exc)
+            run.error_message = exc_message
             run.completed_at = _now()
             run.response_message_id = error_message.id
             _touch_session(run.session)

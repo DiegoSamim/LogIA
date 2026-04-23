@@ -88,6 +88,26 @@ Set `answer_kind` to `weekly_progress`.
 """
 )
 
+DAILY_PROGRESS_PROMPT = WEEKLY_PROGRESS_PROMPT.replace(
+    "Report type: `weekly_progress`",
+    "Report type: `daily_progress`",
+).replace(
+    "Diagnose the week",
+    "Diagnose the day",
+).replace(
+    "Set `answer_kind` to `weekly_progress`.",
+    "Set `answer_kind` to `daily_progress`.",
+).replace(
+    "weekly-",
+    "daily-",
+).replace(
+    "semana",
+    "dia",
+).replace(
+    "semana?",
+    "hoje?",
+)
+
 # Prompt para "Quais bloqueios já registrei?" (recorded-blockers).
 # Foca em updates com update_type=blocker e tarefas com status=blocked.
 BLOCKERS_PROMPT = (
@@ -154,6 +174,7 @@ Set `answer_kind` to `open_tasks`.
 # o prompt correto sem if/elif em cascata.
 SYSTEM_PROMPTS_BY_QUESTION: dict[str, str] = {
     "weekly-progress": WEEKLY_PROGRESS_PROMPT,
+    "daily-progress": DAILY_PROGRESS_PROMPT,
     "recorded-blockers": BLOCKERS_PROMPT,
     "technical-summary": TECHNICAL_SUMMARY_PROMPT,
     "open-tasks": OPEN_TASKS_PROMPT,

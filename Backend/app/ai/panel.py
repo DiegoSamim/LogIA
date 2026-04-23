@@ -336,6 +336,7 @@ def build_query_panel_payload(
 
     panel_kind = {
         "weekly-progress": "weekly_progress",
+        "daily-progress": "daily_progress",
         "recorded-blockers": "blockers",
         "technical-summary": "technical_summary",
         "open-tasks": "open_tasks",

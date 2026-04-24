@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 import app.models  # noqa: F401 — registers all mappers before routers load
-from app.routers import auth, chat, projects, tasks, users
+from app.routers import auth, catalog, chat, projects, tasks, users
 
 settings = get_settings()
 
@@ -40,6 +40,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["projects"])
 app.include_router(tasks.router, prefix="/api/v1", tags=["tasks"])
 app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
+app.include_router(catalog.router, prefix="/api/v1", tags=["catalog"])
 
 
 upload_path = Path(settings.UPLOAD_DIR)

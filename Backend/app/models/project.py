@@ -42,6 +42,9 @@ class Project(Base, TimestampMixin):
     knowledge_chunks: Mapped[list["KnowledgeChunk"]] = relationship(  # type: ignore[name-defined]
         back_populates="project", cascade="all, delete-orphan"
     )
+    catalog: Mapped["DatabaseCatalog | None"] = relationship(  # type: ignore[name-defined]
+        back_populates="project", cascade="all, delete-orphan", uselist=False
+    )
 
 
 class ProjectProfile(Base):

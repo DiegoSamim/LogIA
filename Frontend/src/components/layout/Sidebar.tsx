@@ -48,6 +48,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Database',
+    to: '/projects',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <ellipse cx="12" cy="5" rx="9" ry="3" />
+        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+        <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+      </svg>
+    ),
+  },
+  {
     label: 'Sobre',
     to: '/projects',
     icon: (
@@ -263,8 +274,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex flex-col gap-0.5">
           {NAV_ITEMS.map((item) => {
             const isAboutItem = item.label === 'Sobre'
-            const to = isAboutItem && currentProject?.id ? `/projects/${currentProject.id}/sobre` : item.to
+            const isCatalogItem = item.label === 'Database'
+            let to = item.to
+            if (isAboutItem && currentProject?.id) to = `/projects/${currentProject.id}/sobre`
+            if (isCatalogItem && currentProject?.id) to = `/projects/${currentProject.id}/catalog`
             const isAboutActive = isAboutItem && pathname.startsWith('/projects/') && pathname.endsWith('/sobre')
+            const isCatalogActive = isCatalogItem && pathname.startsWith('/projects/') && pathname.endsWith('/catalog')
 
             return (
               <NavLink
@@ -273,14 +288,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   [
                     'group flex items-center gap-3 rounded-btn px-3 py-2.5 text-sm transition-colors duration-150',
-                    isActive || isAboutActive
+                    isActive || isAboutActive || isCatalogActive
                       ? 'bg-surface-high text-white/90'
                       : 'text-white/38 hover:bg-surface-container hover:text-white/70',
                   ].join(' ')
                 }
               >
                 {({ isActive }) => {
-                  const active = isActive || isAboutActive
+                  const active = isActive || isAboutActive || isCatalogActive
                   return (
                     <>
                       <span

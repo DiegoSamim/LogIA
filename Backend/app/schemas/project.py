@@ -203,17 +203,32 @@ class ProjectResponse(BaseModel):
     done_count: int
     last_session_at: str | None
     created_at: str
+    current_user_role: ProjectMemberRole | None = None
 
     @classmethod
     def from_orm(
         cls,
         project,
         *,
+        current_user_id=None,
         task_count: int = 0,
         done_count: int = 0,
         last_session_at=None,
     ) -> "ProjectResponse":
         profile = project.profile
+        current_user_role = None
+        if current_user_id:
+            member = next(
+                (
+                    item
+                    for item in (getattr(project, "members", []) or [])
+                    if item.user_id == current_user_id
+                ),
+                None,
+            )
+            current_user_role = member.role if member else None
+            if current_user_role is None and project.user_id == current_user_id:
+                current_user_role = "admin"
         return cls(
             id=str(project.id),
             user_id=str(project.user_id),
@@ -227,6 +242,7 @@ class ProjectResponse(BaseModel):
             done_count=done_count,
             last_session_at=last_session_at.isoformat() if last_session_at else None,
             created_at=project.created_at.isoformat(),
+            current_user_role=current_user_role,
         )
 
 
@@ -252,11 +268,11 @@ class ProjectMemberSimpleResponse(BaseModel):
 
 class ProjectMemberCreate(BaseModel):
     email: str = Field(min_length=3, max_length=255)
-    role: ProjectMemberRole = "viewer"
+    role: Literal["editor", "viewer"] = "viewer"
 
 
 class ProjectMemberUpdate(BaseModel):
-    role: ProjectMemberRole
+    role: Literal["editor", "viewer"]
 
 
 class UserLookupResponse(BaseModel):
@@ -280,8 +296,8 @@ class ProjectDetailResponse(ProjectResponse):
     members: list[ProjectMemberSimpleResponse]
 
     @classmethod
-    def from_orm(cls, project) -> "ProjectDetailResponse":  # type: ignore[override]
-        base = ProjectResponse.from_orm(project)
+    def from_orm(cls, project, *, current_user_id=None) -> "ProjectDetailResponse":  # type: ignore[override]
+        base = ProjectResponse.from_orm(project, current_user_id=current_user_id)
         members = getattr(project, "members", []) or []
         return cls(
             **base.model_dump(),

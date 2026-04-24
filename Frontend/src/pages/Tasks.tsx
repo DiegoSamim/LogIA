@@ -30,17 +30,20 @@ import {
   TasksEmptyState,
   TasksKanban,
 } from '@/components/Tasks'
+import { canEditProjectRole } from '@/lib/permissions'
 import {
   EMPTY_TASK_FILTERS,
   type TaskFilterState,
 } from '@/components/Tasks/utils'
 import { taskService } from '@/services/task.service'
+import { projectService } from '@/services/project.service'
 import { useAppStore } from '@/store/useAppStore'
 
 export default function Tasks() {
   const navigate = useNavigate()
-  const { currentProject } = useAppStore()
+  const { currentProject, setCurrentProject } = useAppStore()
   const projectId = currentProject?.id ?? null
+  const canEditProject = canEditProjectRole(currentProject?.current_user_role)
 
   const [tasks, setTasks] = useState<TaskDTO[]>([])
   const [loading, setLoading] = useState(false)
@@ -82,6 +85,13 @@ export default function Tasks() {
       active = false
     }
   }, [projectId])
+
+  useEffect(() => {
+    if (!projectId || currentProject?.current_user_role) return
+    projectService.get(projectId).then(({ data }) => {
+      setCurrentProject({ id: data.id, name: data.name, current_user_role: data.current_user_role })
+    }).catch(() => undefined)
+  }, [currentProject?.current_user_role, projectId, setCurrentProject])
 
   const availableStacks = useMemo(
     () =>
@@ -156,6 +166,7 @@ export default function Tasks() {
   }
 
   async function handleStatusChange(taskId: string, newStatus: TaskStatus) {
+    if (!canEditProject) return
     const prev = tasks.find((t) => t.id === taskId)
     if (!prev) return
 
@@ -199,6 +210,7 @@ export default function Tasks() {
                 <button
                   type="button"
                   onClick={() => navigate('/chat')}
+                  disabled={!canEditProject}
                   className="inline-flex min-h-11 items-center gap-2 rounded-[12px] bg-linear-to-r from-accent-indigo to-accent-violet px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_26px_rgba(99,102,241,0.22)] transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.98]"
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -282,6 +294,7 @@ export default function Tasks() {
             <TasksKanban
               tasks={filteredTasks}
               onStatusChange={handleStatusChange}
+              canEdit={canEditProject}
             />
           ) : (
             <section className="rounded-[28px] border border-white/7 bg-[linear-gradient(180deg,rgba(15,17,22,0.98),rgba(10,12,16,0.98))] p-3 shadow-[0_18px_48px_rgba(0,0,0,0.2)] sm:p-4">

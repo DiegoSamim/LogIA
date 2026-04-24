@@ -99,14 +99,24 @@ async def _verify_task_ownership(db: AsyncSession, task_id: uuid.UUID, user_id: 
     return task
 
 
+async def _verify_task_edit_access(db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID) -> Task:
+    task = await _verify_task_ownership(db, task_id, user_id)
+    await project_service.verify_project_editor(db, task.project_id, user_id)
+    return task
+
+
 async def _verify_project_ownership(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
     await project_service.verify_project_access(db, project_id, user_id)
+
+
+async def _verify_project_edit_access(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    await project_service.verify_project_editor(db, project_id, user_id)
 
 
 async def create(
     db: AsyncSession, user_id: uuid.UUID, project_id: uuid.UUID, data: TaskCreate
 ) -> Task:
-    await _verify_project_ownership(db, project_id, user_id)
+    await _verify_project_edit_access(db, project_id, user_id)
 
     task = Task(
         id=uuid.uuid4(),
@@ -161,7 +171,7 @@ async def get(db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID) -> Task:
 async def update(
     db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskPatch
 ) -> Task:
-    task = await _verify_task_ownership(db, task_id, user_id)
+    task = await _verify_task_edit_access(db, task_id, user_id)
 
     patch = data.model_dump(exclude_none=True)
 
@@ -180,7 +190,7 @@ async def update(
 
 
 async def delete(db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID) -> None:
-    task = await _verify_task_ownership(db, task_id, user_id)
+    task = await _verify_task_edit_access(db, task_id, user_id)
     await db.delete(task)
     await db.commit()
 
@@ -200,7 +210,7 @@ async def list_updates(
 async def add_update(
     db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskUpdateCreate
 ) -> TaskUpdate:
-    task = await _verify_task_ownership(db, task_id, user_id)
+    task = await _verify_task_edit_access(db, task_id, user_id)
     update_obj = TaskUpdate(
         id=uuid.uuid4(),
         task_id=task_id,
@@ -222,7 +232,7 @@ async def add_update(
 async def create_checkpoint(
     db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskCheckpointCreate
 ) -> TaskCheckpoint:
-    await _verify_task_ownership(db, task_id, user_id)
+    await _verify_task_edit_access(db, task_id, user_id)
     cp = TaskCheckpoint(
         id=uuid.uuid4(),
         task_id=task_id,
@@ -245,7 +255,7 @@ async def update_checkpoint(
     user_id: uuid.UUID,
     data: TaskCheckpointPatch,
 ) -> TaskCheckpoint:
-    await _verify_task_ownership(db, task_id, user_id)
+    await _verify_task_edit_access(db, task_id, user_id)
     result = await db.execute(
         select(TaskCheckpoint).where(
             TaskCheckpoint.id == checkpoint_id, TaskCheckpoint.task_id == task_id
@@ -267,7 +277,7 @@ async def update_checkpoint(
 async def create_checkpoints_batch(
     db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, data: TaskCheckpointBatchCreate
 ) -> list[TaskCheckpoint]:
-    await _verify_task_ownership(db, task_id, user_id)
+    await _verify_task_edit_access(db, task_id, user_id)
     checkpoints = [
         TaskCheckpoint(
             id=uuid.uuid4(),
@@ -314,7 +324,7 @@ async def list_attachments(
 async def delete_attachment(
     db: AsyncSession, task_id: uuid.UUID, attachment_id: uuid.UUID, user_id: uuid.UUID
 ) -> None:
-    await _verify_task_ownership(db, task_id, user_id)
+    await _verify_task_edit_access(db, task_id, user_id)
     result = await db.execute(
         select(TaskAttachment).where(
             TaskAttachment.id == attachment_id, TaskAttachment.task_id == task_id
@@ -335,7 +345,7 @@ async def delete_attachment(
 async def create_attachment(
     db: AsyncSession, task_id: uuid.UUID, user_id: uuid.UUID, file: UploadFile
 ) -> TaskAttachment:
-    await _verify_task_ownership(db, task_id, user_id)
+    await _verify_task_edit_access(db, task_id, user_id)
 
     mime = file.content_type or ""
     if mime not in ALLOWED_MIME_TYPES:

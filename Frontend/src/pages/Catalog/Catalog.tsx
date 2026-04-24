@@ -7,6 +7,9 @@ import {
   type EntityDTO,
   type EntitySummaryDTO,
 } from '@/services/catalog.service'
+import { projectService } from '@/services/project.service'
+import { useAppStore } from '@/store/useAppStore'
+import { canEditProjectRole } from '@/lib/permissions'
 import CatalogCards from './CatalogCards'
 import CatalogDiagram from './CatalogDiagram'
 import EntityDetailPanel from './EntityDetailPanel'
@@ -17,6 +20,7 @@ type ViewMode = 'cards' | 'diagram'
 
 export default function Catalog() {
   const { projectId } = useParams<{ projectId: string }>()
+  const { currentProject, setCurrentProject } = useAppStore()
   const [overview, setOverview] = useState<CatalogOverviewDTO | null>(null)
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState<ViewMode>('cards')
@@ -41,19 +45,30 @@ export default function Catalog() {
     void loadCatalog()
   }, [loadCatalog])
 
+  useEffect(() => {
+    if (!projectId || (currentProject?.id === projectId && currentProject.current_user_role)) return
+    projectService.get(projectId).then(({ data }) => {
+      setCurrentProject({ id: data.id, name: data.name, current_user_role: data.current_user_role })
+    }).catch(() => undefined)
+  }, [currentProject?.current_user_role, currentProject?.id, projectId, setCurrentProject])
+
   const dialect: DbDialect = overview?.catalog.dialect ?? 'postgres'
+  const canEdit = canEditProjectRole(
+    currentProject && currentProject.id === projectId ? currentProject.current_user_role : null,
+  )
 
   function handleSelect(entity: EntitySummaryDTO) {
     setSelectedEntityId(entity.id)
   }
 
   function handleCreate() {
+    if (!canEdit) return
     setEditingEntity(null)
     setFormOpen(true)
   }
 
   async function handleSubmitEntity(data: EntitySubmitPayload) {
-    if (!overview) return
+    if (!overview || !canEdit) return
     const { fkRelations, ...entityData } = data
     let entityId: string
 
@@ -87,6 +102,7 @@ export default function Catalog() {
   }
 
   async function handleDeleteEntity(entity: EntityDTO) {
+    if (!canEdit) return
     if (!confirm(`Excluir tabela "${entity.name}"? Esta ação não pode ser desfeita.`)) return
     await catalogService.deleteEntity(entity.id)
     setSelectedEntityId(null)
@@ -94,7 +110,7 @@ export default function Catalog() {
   }
 
   async function updateDialect(nextDialect: DbDialect) {
-    if (!overview) return
+    if (!overview || !canEdit) return
     const { data } = await catalogService.updateCatalog(overview.catalog.id, {
       dialect: nextDialect,
     })
@@ -103,7 +119,7 @@ export default function Catalog() {
   }
 
   async function handleLayoutChange(positions: { entity_id: string; x: number; y: number }[]) {
-    if (!overview) return
+    if (!overview || !canEdit) return
     await catalogService.saveLayout(overview.catalog.id, positions)
     setOverview((prev) =>
       prev
@@ -119,6 +135,7 @@ export default function Catalog() {
   }
 
   function onEditEntity(entity: EntityDTO) {
+    if (!canEdit) return
     setEditingEntity(entity)
     setFormOpen(true)
   }
@@ -182,14 +199,17 @@ export default function Catalog() {
                   Diagrama
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={handleCreate}
-                className="rounded-[8px] bg-gradient-to-r from-accent-indigo to-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:brightness-110"
-              >
-                + Nova Tabela
-              </button>
-              <div className="relative">
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  className="rounded-[8px] bg-gradient-to-r from-accent-indigo to-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:brightness-110"
+                >
+                  + Nova Tabela
+                </button>
+              )}
+              {canEdit && (
+                <div className="relative">
                 <button
                   type="button"
                   onClick={() => setMenuOpen((v) => !v)}
@@ -234,7 +254,8 @@ export default function Catalog() {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -248,6 +269,7 @@ export default function Catalog() {
                 <CatalogCards
                   entities={overview?.entities ?? []}
                   relations={overview?.relations ?? []}
+                  canEdit={canEdit}
                   onSelect={handleSelect}
                   onCreate={handleCreate}
                 />
@@ -255,6 +277,7 @@ export default function Catalog() {
                 <CatalogDiagram
                   entities={overview?.entities ?? []}
                   relations={overview?.relations ?? []}
+                  canEdit={canEdit}
                   onSelect={setSelectedEntityId}
                   onLayoutChange={handleLayoutChange}
                 />
@@ -283,6 +306,7 @@ export default function Catalog() {
           onDelete={(e) => void handleDeleteEntity(e)}
           onDescriptionUpdated={onDescriptionUpdated}
           onNavigateEntity={(id) => setSelectedEntityId(id)}
+          canEdit={canEdit}
         />
       )}
 

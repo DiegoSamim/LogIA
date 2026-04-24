@@ -31,6 +31,7 @@ async def list_projects(
     return [
         ProjectResponse.from_orm(
             row["project"],
+            current_user_id=current_user.id,
             task_count=row["task_count"],
             done_count=row["done_count"],
             last_session_at=row["last_session_at"],
@@ -46,7 +47,7 @@ async def create_project(
     db: AsyncSession = Depends(get_db),
 ):
     project = await project_service.create(db, current_user.id, data)
-    return ProjectDetailResponse.from_orm(project)
+    return ProjectDetailResponse.from_orm(project, current_user_id=current_user.id)
 
 
 @router.get("/{project_id}", response_model=ProjectDetailResponse)
@@ -56,7 +57,7 @@ async def get_project(
     db: AsyncSession = Depends(get_db),
 ):
     project = await project_service.get_detail(db, uuid.UUID(project_id), current_user.id)
-    return ProjectDetailResponse.from_orm(project)
+    return ProjectDetailResponse.from_orm(project, current_user_id=current_user.id)
 
 
 @router.put("/{project_id}", response_model=ProjectDetailResponse)
@@ -67,7 +68,7 @@ async def update_project(
     db: AsyncSession = Depends(get_db),
 ):
     project = await project_service.update(db, uuid.UUID(project_id), current_user.id, data)
-    return ProjectDetailResponse.from_orm(project)
+    return ProjectDetailResponse.from_orm(project, current_user_id=current_user.id)
 
 
 @router.delete("/{project_id}", status_code=204)
@@ -90,7 +91,7 @@ async def update_project_profile(
     project = await project_service.update_profile(
         db, uuid.UUID(project_id), current_user.id, data
     )
-    return ProjectDetailResponse.from_orm(project)
+    return ProjectDetailResponse.from_orm(project, current_user_id=current_user.id)
 
 
 @router.get("/{project_id}/members", response_model=list[ProjectMemberSimpleResponse])

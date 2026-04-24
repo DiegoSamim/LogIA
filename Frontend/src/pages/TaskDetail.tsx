@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { TaskAttachmentDTO, TaskCheckpointDTO, TaskDTO, TaskUpdateDTO, UpdateTaskRequest } from '@/data/dtos'
+import type { ProjectMemberRole, TaskAttachmentDTO, TaskCheckpointDTO, TaskDTO, TaskUpdateDTO, UpdateTaskRequest } from '@/data/dtos'
 import { taskService } from '@/services/task.service'
+import { projectService } from '@/services/project.service'
 import Modal from '@/components/ui/Modal'
 import { useAppStore } from '@/store/useAppStore'
+import { canEditProjectRole } from '@/lib/permissions'
 import {
   TaskAttachments,
   TaskCheckpoints,
@@ -19,6 +21,7 @@ export default function TaskDetail() {
   const { setCurrentTaskTitle } = useAppStore()
 
   const [task, setTask] = useState<TaskDTO | null>(null)
+  const [projectRole, setProjectRole] = useState<ProjectMemberRole | null>(null)
   const [updates, setUpdates] = useState<TaskUpdateDTO[]>([])
   const [checkpoints, setCheckpoints] = useState<TaskCheckpointDTO[]>([])
   const [attachments, setAttachments] = useState<TaskAttachmentDTO[]>([])
@@ -53,6 +56,11 @@ export default function TaskDetail() {
           setUpdates(updatesRes.data)
           setCheckpoints(checkpointsRes.data)
           setAttachments(attachmentsRes.data)
+          projectService.get(taskRes.data.project_id).then(({ data }) => {
+            if (active) setProjectRole(data.current_user_role)
+          }).catch(() => {
+            if (active) setProjectRole(null)
+          })
         }
       } catch (err: unknown) {
         if (active) {
@@ -80,6 +88,7 @@ export default function TaskDetail() {
   }, [task?.title, setCurrentTaskTitle])
 
   function startEdit() {
+    if (!canEditProject) return
     if (!task) return
     setDraft({
       title: task.title,
@@ -106,6 +115,7 @@ export default function TaskDetail() {
   }
 
   async function saveEdit() {
+    if (!canEditProject) return
     if (!taskId || !task) return
     setSaving(true)
     try {
@@ -119,6 +129,7 @@ export default function TaskDetail() {
   }
 
   async function handleDelete() {
+    if (!canEditProject) return
     if (!taskId) return
     setDeleting(true)
     try {
@@ -131,6 +142,7 @@ export default function TaskDetail() {
   }
 
   async function handleToggleCheckpoint(checkpointId: string, isDone: boolean) {
+    if (!canEditProject) return
     if (!taskId) return
     // Optimistic update
     setCheckpoints((prev) =>
@@ -146,6 +158,8 @@ export default function TaskDetail() {
       )
     }
   }
+
+  const canEditProject = canEditProjectRole(projectRole)
 
   if (loading) {
     return (
@@ -183,6 +197,7 @@ export default function TaskDetail() {
             onSave={() => { void saveEdit() }}
             onCancel={cancelEdit}
             onDelete={() => setShowDeleteModal(true)}
+            canEdit={canEditProject}
             draft={draft}
             onDraftChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))}
           />
@@ -203,6 +218,7 @@ export default function TaskDetail() {
               <TaskCheckpoints
                 taskId={task.id}
                 checkpoints={checkpoints}
+                canEdit={canEditProject}
                 onNewCheckpoint={(checkpoint) =>
                   setCheckpoints((prev) =>
                     [...prev, checkpoint].sort((a, b) => a.order_index - b.order_index),
@@ -215,6 +231,7 @@ export default function TaskDetail() {
               <TaskAttachments
                 taskId={task.id}
                 attachments={attachments}
+                canEdit={canEditProject}
                 onNewAttachment={(a) => setAttachments((prev) => [a, ...prev])}
                 onDeleteAttachment={(id) => setAttachments((prev) => prev.filter((a) => a.id !== id))}
               />
@@ -224,6 +241,7 @@ export default function TaskDetail() {
                 taskId={task.id}
                 task={task}
                 updates={updates}
+                canEdit={canEditProject}
                 onNewUpdate={(update) => setUpdates((prev) => [update, ...prev])}
                 onTaskChange={setTask}
               />

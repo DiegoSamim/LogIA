@@ -3,6 +3,7 @@ import type { EntitySummaryDTO, RelationDTO } from '@/services/catalog.service'
 interface Props {
   entities: EntitySummaryDTO[]
   relations: RelationDTO[]
+  canEdit: boolean
   onSelect: (entity: EntitySummaryDTO) => void
   onCreate: () => void
 }
@@ -51,19 +52,23 @@ function TypeIcon({ type }: { type: string }) {
   )
 }
 
-export default function CatalogCards({ entities, relations, onSelect, onCreate }: Props) {
+export default function CatalogCards({ entities, relations, canEdit, onSelect, onCreate }: Props) {
   if (entities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-[14px] border border-dashed border-white/10 bg-surface-container/40 py-20 text-center">
         <p className="text-sm text-white/60">Catálogo vazio.</p>
-        <p className="mt-1 text-xs text-white/36">Crie a primeira tabela ou importe um DDL.</p>
-        <button
-          type="button"
-          onClick={onCreate}
-          className="mt-4 rounded-[8px] bg-gradient-to-r from-accent-indigo to-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:brightness-110"
-        >
-          + Nova tabela
-        </button>
+        <p className="mt-1 text-xs text-white/36">
+          {canEdit ? 'Crie a primeira tabela ou importe um DDL.' : 'Nenhuma tabela cadastrada para visualização.'}
+        </p>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onCreate}
+            className="mt-4 rounded-[8px] bg-gradient-to-r from-accent-indigo to-indigo-500 px-4 py-2 text-xs font-semibold text-white hover:brightness-110"
+          >
+            + Nova tabela
+          </button>
+        )}
       </div>
     )
   }

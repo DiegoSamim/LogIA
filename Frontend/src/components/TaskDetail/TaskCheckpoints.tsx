@@ -5,11 +5,12 @@ import { taskService } from '@/services/task.service'
 interface Props {
   taskId: string
   checkpoints: TaskCheckpointDTO[]
+  canEdit: boolean
   onNewCheckpoint: (checkpoint: TaskCheckpointDTO) => void
   onToggle: (id: string, isDone: boolean) => void
 }
 
-export default function TaskCheckpoints({ taskId, checkpoints, onNewCheckpoint, onToggle }: Props) {
+export default function TaskCheckpoints({ taskId, checkpoints, canEdit, onNewCheckpoint, onToggle }: Props) {
   const total = checkpoints.length
   const done = checkpoints.filter((c) => c.is_done).length
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -49,7 +50,7 @@ export default function TaskCheckpoints({ taskId, checkpoints, onNewCheckpoint, 
           <span className="text-[11px] tabular-nums text-white/36">
             {done}/{total}
           </span>
-          {!formOpen ? (
+          {canEdit && !formOpen ? (
             <button
               type="button"
               onClick={() => setFormOpen(true)}
@@ -71,7 +72,7 @@ export default function TaskCheckpoints({ taskId, checkpoints, onNewCheckpoint, 
         />
       </div>
 
-      {formOpen ? (
+      {canEdit && formOpen ? (
         <form
           onSubmit={(e) => { void handleSubmit(e) }}
           className="mt-4 space-y-3 rounded-[16px] border border-white/8 bg-surface-container/60 p-4"
@@ -118,7 +119,10 @@ export default function TaskCheckpoints({ taskId, checkpoints, onNewCheckpoint, 
               <li key={checkpoint.id}>
                 <button
                   type="button"
-                  onClick={() => onToggle(checkpoint.id, !checkpoint.is_done)}
+                  onClick={() => {
+                    if (canEdit) onToggle(checkpoint.id, !checkpoint.is_done)
+                  }}
+                  disabled={!canEdit}
                   className="group flex w-full items-start gap-3 rounded-[10px] px-2 py-2.5 text-left transition-[background-color] duration-150 hover:bg-white/4"
                 >
                   <span

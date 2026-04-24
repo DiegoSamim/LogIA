@@ -87,6 +87,7 @@ export interface ProjectDTO {
   task_count: number            // computed: COUNT(tasks) WHERE project_id
   done_count: number            // computed: COUNT(tasks) WHERE project_id AND status='done'
   created_at: string            // source: projects.created_at
+  current_user_role: ProjectMemberRole | null // computed: project_members.role for authenticated user
 }
 
 /**
@@ -149,11 +150,11 @@ export interface UserLookupDTO {
 
 export interface AddProjectMemberRequest {
   email: string
-  role: ProjectMemberRole
+  role: Exclude<ProjectMemberRole, 'admin'>
 }
 
 export interface UpdateProjectMemberRequest {
-  role: ProjectMemberRole
+  role: Exclude<ProjectMemberRole, 'admin'>
 }
 
 /**

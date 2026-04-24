@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { UserDTO } from '@/data/dtos'
+import type { ProjectMemberRole, UserDTO } from '@/data/dtos'
 
 interface CurrentProject {
   id: string
   name: string
+  current_user_role?: ProjectMemberRole | null
 }
 
 interface AppState {

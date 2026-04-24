@@ -9,6 +9,7 @@ export default function AboutHero({
   saving,
   canSave,
   canEditProject,
+  canDeleteProject,
   error,
   onCancel,
   onSave,
@@ -22,6 +23,7 @@ export default function AboutHero({
   saving: boolean
   canSave: boolean
   canEditProject: boolean
+  canDeleteProject: boolean
   error: string | null
   onCancel: () => void
   onSave: () => void
@@ -91,13 +93,15 @@ export default function AboutHero({
               </>
             ) : canEditProject ? (
               <>
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  className="rounded-btn border border-red-500/16 bg-red-500/8 px-4 py-2.5 text-xs font-semibold tracking-[0.16em] text-red-300 uppercase transition-[border-color,background-color,color] duration-150 hover:border-red-500/28 hover:bg-red-500/12 hover:text-red-200"
-                >
-                  Excluir
-                </button>
+                {canDeleteProject && (
+                  <button
+                    type="button"
+                    onClick={onDelete}
+                    className="rounded-btn border border-red-500/16 bg-red-500/8 px-4 py-2.5 text-xs font-semibold tracking-[0.16em] text-red-300 uppercase transition-[border-color,background-color,color] duration-150 hover:border-red-500/28 hover:bg-red-500/12 hover:text-red-200"
+                  >
+                    Excluir
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onEdit}
@@ -108,7 +112,7 @@ export default function AboutHero({
               </>
             ) : (
               <div className="max-w-sm rounded-[18px] border border-white/7 bg-surface-base/70 px-4 py-3 text-xs text-white/42">
-                Apenas o criador do projeto pode editar os dados gerais. Admins adicionais podem gerenciar membros abaixo.
+                Seu papel neste projeto permite apenas visualização.
               </div>
             )}
           </div>

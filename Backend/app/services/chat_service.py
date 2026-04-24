@@ -32,6 +32,7 @@ from app.services.knowledge_service import (
     embed_text,
     search_by_project,
 )
+from app.services import project_service
 
 logger = logging.getLogger(__name__)
 
@@ -1108,7 +1109,10 @@ async def _execute_query_run(run_id: uuid.UUID) -> None:
 async def create_session(
     db: AsyncSession, user_id: uuid.UUID, project_id: uuid.UUID, data: ChatSessionCreate
 ) -> ChatSession:
-    await _verify_project_ownership(db, project_id, user_id)
+    if data.mode == "query":
+        await project_service.verify_project_access(db, project_id, user_id)
+    else:
+        await project_service.verify_project_editor(db, project_id, user_id)
     session = ChatSession(
         id=uuid.uuid4(),
         user_id=user_id,
@@ -1144,6 +1148,7 @@ async def update_session(
     db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID, data: ChatSessionUpdate
 ) -> ChatSession:
     session = await _verify_session_ownership(db, session_id, user_id)
+    await project_service.verify_project_editor(db, session.project_id, user_id)
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(session, field, value)
     _touch_session(session)
@@ -1155,6 +1160,7 @@ async def finish_session(
     db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID
 ) -> ChatSession:
     session = await _verify_session_ownership(db, session_id, user_id)
+    await project_service.verify_project_editor(db, session.project_id, user_id)
     session.status = "finished"
     session.ended_at = _now()
     _touch_session(session)
@@ -1166,6 +1172,7 @@ async def delete_session(
     db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID
 ) -> None:
     session = await _verify_session_ownership(db, session_id, user_id)
+    await project_service.verify_project_editor(db, session.project_id, user_id)
     await db.delete(session)
     await db.commit()
 
@@ -1174,6 +1181,7 @@ async def add_message(
     db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID, data: ChatMessageCreate
 ) -> ChatMessage:
     session = await _verify_session_ownership(db, session_id, user_id)
+    await project_service.verify_project_editor(db, session.project_id, user_id)
     msg = ChatMessage(
         id=uuid.uuid4(),
         session_id=session_id,
@@ -1207,7 +1215,7 @@ async def start_query(
     project_id: uuid.UUID,
     data: QueryStartRequest,
 ) -> tuple[ChatSession, QueryRun, ChatMessage]:
-    await _verify_project_ownership(db, project_id, user_id)
+    await project_service.verify_project_access(db, project_id, user_id)
 
     if data.question_key not in QUERY_QUESTION_CATALOG:
         raise HTTPException(

@@ -15,6 +15,7 @@ interface Props {
   onSave: () => void
   onCancel: () => void
   onDelete: () => void
+  canEdit: boolean
   draft: UpdateTaskRequest
   onDraftChange: (patch: Partial<UpdateTaskRequest>) => void
 }
@@ -30,6 +31,7 @@ export default function TaskDetailHeader({
   onSave,
   onCancel,
   onDelete,
+  canEdit,
   draft,
   onDraftChange,
 }: Props) {
@@ -137,7 +139,7 @@ export default function TaskDetailHeader({
                     Salvar
                   </button>
                 </>
-              ) : (
+              ) : canEdit ? (
                 <>
                   <button
                     type="button"
@@ -157,7 +159,7 @@ export default function TaskDetailHeader({
                     Editar
                   </button>
                 </>
-              )}
+              ) : null}
             </div>
           </div>
 

@@ -46,6 +46,15 @@ async def _verify_entity_catalog(
     return entity, catalog
 
 
+async def _verify_entity_catalog_editor(
+    db: AsyncSession, entity_id: uuid.UUID, user_id: uuid.UUID
+) -> tuple[CatalogEntity, DatabaseCatalog]:
+    entity = await _load_entity(db, entity_id)
+    catalog = await _load_catalog(db, entity.catalog_id)
+    await project_service.verify_project_editor(db, catalog.project_id, user_id)
+    return entity, catalog
+
+
 async def _load_catalog(db: AsyncSession, catalog_id: uuid.UUID) -> DatabaseCatalog:
     result = await db.execute(
         select(DatabaseCatalog).where(DatabaseCatalog.id == catalog_id)
@@ -64,6 +73,14 @@ async def _verify_catalog(
     return catalog
 
 
+async def _verify_catalog_editor(
+    db: AsyncSession, catalog_id: uuid.UUID, user_id: uuid.UUID
+) -> DatabaseCatalog:
+    catalog = await _load_catalog(db, catalog_id)
+    await project_service.verify_project_editor(db, catalog.project_id, user_id)
+    return catalog
+
+
 async def get_or_create_catalog(
     db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID
 ) -> DatabaseCatalog:
@@ -74,6 +91,7 @@ async def get_or_create_catalog(
     catalog = result.scalar_one_or_none()
     if catalog:
         return catalog
+    await project_service.verify_project_editor(db, project_id, user_id)
     catalog = DatabaseCatalog(
         id=uuid.uuid4(),
         project_id=project_id,
@@ -89,7 +107,7 @@ async def get_or_create_catalog(
 async def update_catalog(
     db: AsyncSession, catalog_id: uuid.UUID, user_id: uuid.UUID, data: CatalogUpdate
 ) -> DatabaseCatalog:
-    catalog = await _verify_catalog(db, catalog_id, user_id)
+    catalog = await _verify_catalog_editor(db, catalog_id, user_id)
     for field_name, value in data.model_dump(exclude_unset=True).items():
         setattr(catalog, field_name, value)
     await db.commit()
@@ -149,7 +167,7 @@ async def create_entity(
     user_id: uuid.UUID,
     data: EntityCreate,
 ) -> CatalogEntity:
-    await _verify_catalog(db, catalog_id, user_id)
+    await _verify_catalog_editor(db, catalog_id, user_id)
     entity_id = uuid.uuid4()
     entity = CatalogEntity(
         id=entity_id,
@@ -188,7 +206,7 @@ async def update_entity(
     user_id: uuid.UUID,
     data: EntityUpdate,
 ) -> CatalogEntity:
-    entity, _ = await _verify_entity_catalog(db, entity_id, user_id)
+    entity, _ = await _verify_entity_catalog_editor(db, entity_id, user_id)
     payload = data.model_dump(exclude_unset=True)
     columns_payload = payload.pop("columns", None)
     for field_name, value in payload.items():
@@ -202,7 +220,7 @@ async def update_entity(
 async def delete_entity(
     db: AsyncSession, entity_id: uuid.UUID, user_id: uuid.UUID
 ) -> None:
-    entity, _ = await _verify_entity_catalog(db, entity_id, user_id)
+    entity, _ = await _verify_entity_catalog_editor(db, entity_id, user_id)
     await db.delete(entity)
     await db.commit()
 
@@ -227,7 +245,7 @@ async def create_relation(
     user_id: uuid.UUID,
     data: RelationCreate,
 ) -> CatalogRelation:
-    await _verify_catalog(db, catalog_id, user_id)
+    await _verify_catalog_editor(db, catalog_id, user_id)
     from_id = uuid.UUID(data.from_entity_id)
     to_id = uuid.UUID(data.to_entity_id)
     # Both entities must belong to this catalog
@@ -275,7 +293,7 @@ async def delete_relation(
     rel = result.scalar_one_or_none()
     if not rel:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Relação não encontrada.")
-    await _verify_catalog(db, rel.catalog_id, user_id)
+    await _verify_catalog_editor(db, rel.catalog_id, user_id)
     await db.delete(rel)
     await db.commit()
 
@@ -286,7 +304,7 @@ async def save_layout(
     user_id: uuid.UUID,
     data: LayoutUpdate,
 ) -> None:
-    await _verify_catalog(db, catalog_id, user_id)
+    await _verify_catalog_editor(db, catalog_id, user_id)
     if not data.positions:
         return
     ids = [uuid.UUID(p.entity_id) for p in data.positions]
@@ -310,7 +328,7 @@ async def import_ddl(
     user_id: uuid.UUID,
     data: DDLImportRequest,
 ) -> DDLImportResponse:
-    catalog = await _verify_catalog(db, catalog_id, user_id)
+    catalog = await _verify_catalog_editor(db, catalog_id, user_id)
     dialect = data.dialect or catalog.dialect
     parsed = ddl_parser.parse_ddl(data.ddl, dialect)
 

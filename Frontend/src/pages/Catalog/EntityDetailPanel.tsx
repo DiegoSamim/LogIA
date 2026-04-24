@@ -9,6 +9,7 @@ interface Props {
   onDelete: (entity: EntityDTO) => void
   onDescriptionUpdated: (entity: EntityDTO) => void
   onNavigateEntity: (entityId: string) => void
+  canEdit: boolean
 }
 
 export default function EntityDetailPanel({
@@ -19,6 +20,7 @@ export default function EntityDetailPanel({
   onDelete,
   onDescriptionUpdated,
   onNavigateEntity,
+  canEdit,
 }: Props) {
   const [entity, setEntity] = useState<EntityDTO | null>(null)
   const [loading, setLoading] = useState(true)
@@ -45,6 +47,7 @@ export default function EntityDetailPanel({
   }, [entityId])
 
   async function saveDescription() {
+    if (!canEdit) return
     if (!entity) return
     setSavingDesc(true)
     try {
@@ -100,7 +103,7 @@ export default function EntityDetailPanel({
           <p className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-white/40 uppercase">
             Descrição
           </p>
-          {editingDesc ? (
+          {canEdit && editingDesc ? (
             <div className="space-y-2">
               <textarea
                 value={descValue}
@@ -132,8 +135,11 @@ export default function EntityDetailPanel({
           ) : (
             <button
               type="button"
-              onClick={() => setEditingDesc(true)}
-              className="block w-full rounded-[8px] border border-white/4 bg-surface-low/40 px-3 py-2 text-left text-[13px] leading-6 text-white/78 transition hover:border-white/12 hover:bg-surface-low/70"
+              onClick={() => {
+                if (canEdit) setEditingDesc(true)
+              }}
+              disabled={!canEdit}
+              className="block w-full rounded-[8px] border border-white/4 bg-surface-low/40 px-3 py-2 text-left text-[13px] leading-6 text-white/78 transition hover:border-white/12 hover:bg-surface-low/70 disabled:cursor-default"
             >
               {entity?.description || (
                 <span className="italic text-white/36">Clique para adicionar descrição…</span>
@@ -233,7 +239,7 @@ export default function EntityDetailPanel({
         )}
       </div>
 
-      {entity && (
+      {entity && canEdit && (
         <div className="flex items-center justify-between gap-2 border-t border-white/6 px-5 py-4">
           <button
             type="button"

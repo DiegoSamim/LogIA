@@ -19,6 +19,7 @@ import type { EntitySummaryDTO, RelationDTO } from '@/services/catalog.service'
 interface Props {
   entities: EntitySummaryDTO[]
   relations: RelationDTO[]
+  canEdit: boolean
   onSelect: (entityId: string) => void
   onLayoutChange: (positions: { entity_id: string; x: number; y: number }[]) => void
 }
@@ -92,7 +93,7 @@ function computeAutoLayout(entities: EntitySummaryDTO[]): Record<string, { x: nu
   return positions
 }
 
-export default function CatalogDiagram({ entities, relations, onSelect, onLayoutChange }: Props) {
+export default function CatalogDiagram({ entities, relations, canEdit, onSelect, onLayoutChange }: Props) {
   const autoLayout = useMemo(() => computeAutoLayout(entities), [entities])
 
   const [nodes, setNodes] = useState<Node<TableNodeData>[]>([])
@@ -137,7 +138,7 @@ export default function CatalogDiagram({ entities, relations, onSelect, onLayout
       setNodes((nds) => applyNodeChanges(changes, nds))
 
       const hasPositionDone = changes.some((c) => c.type === 'position' && !c.dragging)
-      if (hasPositionDone) {
+      if (canEdit && hasPositionDone) {
         if (debounceRef.current) window.clearTimeout(debounceRef.current)
         debounceRef.current = window.setTimeout(() => {
           setNodes((nds) => {
@@ -147,7 +148,7 @@ export default function CatalogDiagram({ entities, relations, onSelect, onLayout
         }, 500)
       }
     },
-    [onLayoutChange],
+    [canEdit, onLayoutChange],
   )
 
   const handleNodeClick: NodeMouseHandler = useCallback(
@@ -172,6 +173,7 @@ export default function CatalogDiagram({ entities, relations, onSelect, onLayout
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onNodeClick={handleNodeClick}
+        nodesDraggable={canEdit}
         nodesConnectable={false}
         fitView
         proOptions={{ hideAttribution: true }}

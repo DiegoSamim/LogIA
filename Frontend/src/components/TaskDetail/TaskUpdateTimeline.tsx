@@ -15,6 +15,7 @@ interface Props {
   taskId: string
   task: TaskDTO
   updates: TaskUpdateDTO[]
+  canEdit: boolean
   onNewUpdate: (update: TaskUpdateDTO) => void
   onTaskChange: (task: TaskDTO) => void
 }
@@ -63,7 +64,7 @@ const ALL_UPDATE_TYPES: UpdateType[] = [
   'edit',
 ]
 
-export default function TaskUpdateTimeline({ taskId, task, updates, onNewUpdate, onTaskChange }: Props) {
+export default function TaskUpdateTimeline({ taskId, task, updates, canEdit, onNewUpdate, onTaskChange }: Props) {
   const [formOpen, setFormOpen] = useState(false)
   const [type, setType] = useState<UpdateType>('progress')
   const [summary, setSummary] = useState('')
@@ -113,7 +114,7 @@ export default function TaskUpdateTimeline({ taskId, task, updates, onNewUpdate,
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/28">
           Histórico de atualizações
         </p>
-        {!formOpen ? (
+        {canEdit && !formOpen ? (
           <button
             type="button"
             onClick={() => setFormOpen(true)}
@@ -128,7 +129,7 @@ export default function TaskUpdateTimeline({ taskId, task, updates, onNewUpdate,
       </div>
 
       {/* Add update form */}
-      {formOpen ? (
+      {canEdit && formOpen ? (
         <form
           onSubmit={(e) => { void handleSubmit(e) }}
           className="mt-4 rounded-[16px] border border-white/8 bg-surface-container/60 p-4 space-y-3"

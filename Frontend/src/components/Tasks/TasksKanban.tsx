@@ -56,6 +56,7 @@ function KanbanCard({
   onDragStart,
   onDragEnd,
   onClick,
+  canEdit,
 }: {
   task: TaskDTO
   isDragging: boolean
@@ -63,13 +64,14 @@ function KanbanCard({
   onDragStart: () => void
   onDragEnd: () => void
   onClick: () => void
+  canEdit: boolean
 }) {
   const categoryOption = CATEGORY_CHIP_OPTIONS.find((o) => o.value === task.category)
   const meta = TASK_STATUS_META[task.status]
 
   return (
     <article
-      draggable={!isUpdating}
+      draggable={canEdit && !isUpdating}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
@@ -80,7 +82,9 @@ function KanbanCard({
           ? 'cursor-wait opacity-50'
           : isDragging
           ? 'cursor-grabbing opacity-60 scale-[0.98]'
-          : 'cursor-grab hover:border-white/14',
+          : canEdit
+          ? 'cursor-grab hover:border-white/14'
+          : 'cursor-pointer hover:border-white/14',
       ].join(' ')}
     >
       <p className="text-[13px] font-semibold leading-5 text-white/90 break-words">
@@ -107,9 +111,11 @@ function KanbanCard({
 export default function TasksKanban({
   tasks,
   onStatusChange,
+  canEdit,
 }: {
   tasks: TaskDTO[]
   onStatusChange: (taskId: string, newStatus: TaskStatus) => Promise<void>
+  canEdit: boolean
 }) {
   const navigate = useNavigate()
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -122,6 +128,7 @@ export default function TasksKanban({
   }
 
   function handleDragStart(taskId: string) {
+    if (!canEdit) return
     setDraggingId(taskId)
   }
 
@@ -131,6 +138,7 @@ export default function TasksKanban({
   }
 
   function handleDragOver(e: React.DragEvent, status: TaskStatus) {
+    if (!canEdit) return
     e.preventDefault()
     if (dragLeaveTimerRef.current) {
       clearTimeout(dragLeaveTimerRef.current)
@@ -147,6 +155,7 @@ export default function TasksKanban({
 
   async function handleDrop(e: React.DragEvent, newStatus: TaskStatus) {
     e.preventDefault()
+    if (!canEdit) return
     setDragOverStatus(null)
 
     if (!draggingId) return
@@ -206,6 +215,7 @@ export default function TasksKanban({
                     task={task}
                     isDragging={draggingId === task.id}
                     isUpdating={updatingIds.has(task.id)}
+                    canEdit={canEdit}
                     onDragStart={() => {
                       if (!anyUpdating) handleDragStart(task.id)
                     }}

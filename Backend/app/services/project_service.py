@@ -249,7 +249,10 @@ async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[dict[str, A
                 Project.members.any(ProjectMember.user_id == user_id),
             )
         )
-        .options(selectinload(Project.profile))
+        .options(
+            selectinload(Project.profile),
+            selectinload(Project.members).selectinload(ProjectMember.user),
+        )
         .order_by(Project.created_at.desc())
     )
     rows = result.all()
@@ -266,7 +269,7 @@ async def get_detail(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID
 async def update(
     db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID, data: ProjectUpdate
 ) -> Project:
-    project = await verify_project_owner(db, project_id, user_id)
+    project = await verify_project_editor(db, project_id, user_id)
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(project, field, value)
     await db.commit()
@@ -276,7 +279,7 @@ async def update(
 async def update_profile(
     db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID, data: ProjectProfileUpdate
 ) -> Project:
-    project = await verify_project_owner(db, project_id, user_id)
+    project = await verify_project_editor(db, project_id, user_id)
 
     if project.profile:
         profile_payload = _normalize_profile_payload(
@@ -300,7 +303,7 @@ async def update_profile(
 
 
 async def delete(db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID) -> None:
-    project = await verify_project_owner(db, project_id, user_id)
+    project = await verify_project_admin(db, project_id, user_id)
     await db.delete(project)
     await db.commit()
 
@@ -345,15 +348,36 @@ async def verify_project_owner(
     return project
 
 
+def get_project_role(project: Project, user_id: uuid.UUID) -> str | None:
+    membership = next((member for member in project.members if member.user_id == user_id), None)
+    if membership:
+        return membership.role
+    if project.user_id == user_id:
+        return "admin"
+    return None
+
+
 async def verify_project_admin(
     db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID
 ) -> Project:
     project = await verify_project_access(db, project_id, user_id)
-    membership = next((member for member in project.members if member.user_id == user_id), None)
-    if not membership or membership.role != "admin":
+    if get_project_role(project, user_id) != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Somente admins podem gerenciar membros deste projeto.",
+        )
+    return project
+
+
+async def verify_project_editor(
+    db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID
+) -> Project:
+    project = await verify_project_access(db, project_id, user_id)
+    role = get_project_role(project, user_id)
+    if role not in {"admin", "editor"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Você não tem permissão para alterar este projeto.",
         )
     return project
 
@@ -378,6 +402,11 @@ async def add_member(
     data: ProjectMemberCreate,
 ) -> ProjectMember:
     project = await verify_project_admin(db, project_id, current_user_id)
+    if data.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Novos membros só podem ser adicionados como editor ou visualizador.",
+        )
     user = await search_user_by_email(db, data.email)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado.")
@@ -413,13 +442,16 @@ async def update_member(
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membro não encontrado.")
 
-    if member.user_id == current_user_id and data.role != "admin":
-        admin_count = sum(1 for item in project.members if item.role == "admin")
-        if admin_count <= 1:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Não é possível remover o último admin do projeto.",
-            )
+    if member.user_id == current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Você não pode alterar o seu próprio papel no projeto.",
+        )
+    if data.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Membros só podem ser alterados para editor ou visualizador.",
+        )
 
     member.role = data.role
     await db.commit()
@@ -441,6 +473,12 @@ async def remove_member(
     member = next((item for item in project.members if item.id == member_id), None)
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membro não encontrado.")
+
+    if member.user_id == current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Você não pode se remover do projeto.",
+        )
 
     if member.role == "admin":
         admin_count = sum(1 for item in project.members if item.role == "admin")
@@ -469,7 +507,7 @@ async def list_attachments(
 async def create_attachment(
     db: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID, file: UploadFile
 ) -> ProjectAttachment:
-    await verify_project_access(db, project_id, user_id)
+    await verify_project_editor(db, project_id, user_id)
 
     mime = file.content_type or ""
     if mime not in ALLOWED_MIME_TYPES:
@@ -520,7 +558,7 @@ async def create_attachment(
 async def delete_attachment(
     db: AsyncSession, project_id: uuid.UUID, attachment_id: uuid.UUID, user_id: uuid.UUID
 ) -> None:
-    await verify_project_access(db, project_id, user_id)
+    await verify_project_editor(db, project_id, user_id)
     result = await db.execute(
         select(ProjectAttachment).where(
             ProjectAttachment.id == attachment_id,

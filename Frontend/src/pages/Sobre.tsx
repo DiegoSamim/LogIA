@@ -24,6 +24,11 @@ import {
   normalizeNullable,
   toFormState,
 } from '@/lib/sobre'
+import {
+  canDeleteProjectRole,
+  canEditProjectRole,
+  canManageProjectMembersRole,
+} from '@/lib/permissions'
 
 export default function Sobre() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -46,7 +51,7 @@ export default function Sobre() {
   const [memberSearchLoading, setMemberSearchLoading] = useState(false)
   const [memberMutationLoading, setMemberMutationLoading] = useState<string | null>(null)
   const [memberError, setMemberError] = useState<string | null>(null)
-  const [selectedRole, setSelectedRole] = useState<ProjectMemberRole>('viewer')
+  const [selectedRole, setSelectedRole] = useState<Exclude<ProjectMemberRole, 'admin'>>('viewer')
   const [attachments, setAttachments] = useState<ProjectAttachmentDTO[]>([])
   const [editScrollTarget, setEditScrollTarget] = useState<string | null>(null)
 
@@ -84,7 +89,11 @@ export default function Sobre() {
       .then(([projectRes, attachmentsRes]) => {
         setProject(projectRes.data)
         setForm(toFormState(projectRes.data))
-        setCurrentProject({ id: projectRes.data.id, name: projectRes.data.name })
+        setCurrentProject({
+          id: projectRes.data.id,
+          name: projectRes.data.name,
+          current_user_role: projectRes.data.current_user_role,
+        })
         setAttachments(attachmentsRes.data)
       })
       .catch((err: unknown) => {
@@ -100,11 +109,10 @@ export default function Sobre() {
 
   const displayProfile = useMemo(() => (project ? buildDisplayProfile(project) : null), [project])
   const links = useMemo(() => (displayProfile ? buildProjectLinks(displayProfile) : []), [displayProfile])
-  const canEditProject = Boolean(currentUser?.id && project?.user_id === currentUser.id)
-  const canManageMembers = Boolean(
-    currentUser?.id &&
-      project?.members?.some((member) => member.user_id === currentUser.id && member.role === 'admin'),
-  )
+  const currentUserRole = project?.current_user_role
+  const canEditProject = canEditProjectRole(currentUserRole)
+  const canManageMembers = canManageProjectMembersRole(currentUserRole)
+  const canDeleteProject = canDeleteProjectRole(currentUserRole)
 
   function updateField<K extends keyof ProjectFormState>(field: K, value: ProjectFormState[K]) {
     setForm((current) => (current ? { ...current, [field]: value } : current))
@@ -132,7 +140,7 @@ export default function Sobre() {
     if (!projectId) return
     const { data } = await projectService.get(projectId)
     setProject(data)
-    setCurrentProject({ id: data.id, name: data.name })
+    setCurrentProject({ id: data.id, name: data.name, current_user_role: data.current_user_role })
   }
 
   async function handleSave() {
@@ -186,7 +194,7 @@ export default function Sobre() {
 
       setProject(data)
       setForm(toFormState(data))
-      setCurrentProject({ id: data.id, name: data.name })
+      setCurrentProject({ id: data.id, name: data.name, current_user_role: data.current_user_role })
       setEditing(false)
     } catch {
       setError('Não foi possível salvar as alterações do projeto.')
@@ -197,6 +205,7 @@ export default function Sobre() {
 
   async function handleDeleteProject() {
     if (!projectId) return
+    if (!canDeleteProject) return
 
     setDeleting(true)
     setError(null)
@@ -260,7 +269,7 @@ export default function Sobre() {
     }
   }
 
-  async function handleUpdateMemberRole(memberId: string, role: ProjectMemberRole) {
+  async function handleUpdateMemberRole(memberId: string, role: Exclude<ProjectMemberRole, 'admin'>) {
     if (!projectId || !canManageMembers) return
 
     setMemberMutationLoading(memberId)
@@ -347,6 +356,7 @@ export default function Sobre() {
             saving={saving}
             canSave={Boolean(form.name.trim())}
             canEditProject={canEditProject}
+            canDeleteProject={canDeleteProject}
             error={error}
             onCancel={handleCancel}
             onSave={handleSave}
@@ -368,6 +378,7 @@ export default function Sobre() {
                 onStartEditing={(sectionId) => handleStartEditing(sectionId)}
                 canEditProject={canEditProject}
                 canManageMembers={canManageMembers}
+                currentUserId={currentUser?.id ?? null}
                 memberEmailQuery={memberEmailQuery}
                 selectedRole={selectedRole}
                 memberLookup={memberLookup}
@@ -394,9 +405,10 @@ export default function Sobre() {
                 }}
               />
               <div className="border-t border-white/6 px-5 py-5 sm:px-7">
-                <ProjectAttachments
+                  <ProjectAttachments
                   projectId={project.id}
                   attachments={attachments}
+                  canManage={canEditProject}
                   onNewAttachment={(a) => setAttachments((prev) => [...prev, a])}
                   onDeleteAttachment={(id) => setAttachments((prev) => prev.filter((a) => a.id !== id))}
                 />

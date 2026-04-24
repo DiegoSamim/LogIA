@@ -7,6 +7,7 @@ import { buildFileUrl } from '@/services/api'
 interface Props {
   projectId: string
   attachments: ProjectAttachmentDTO[]
+  canManage: boolean
   onNewAttachment: (a: ProjectAttachmentDTO) => void
   onDeleteAttachment: (id: string) => void
 }
@@ -39,6 +40,7 @@ function FileIcon() {
 export default function ProjectAttachments({
   projectId,
   attachments,
+  canManage,
   onNewAttachment,
   onDeleteAttachment,
 }: Props) {
@@ -84,7 +86,8 @@ export default function ProjectAttachments({
       </div>
 
       {/* Upload zone */}
-      <div className="mt-4">
+      {canManage && (
+        <div className="mt-4">
         <label
           className={`flex cursor-pointer items-center justify-center gap-2 rounded-[14px] border border-dashed border-white/10 py-4 text-sm text-white/34 transition-[border-color,color,background-color] duration-150 hover:border-accent-indigo/36 hover:bg-accent-indigo/4 hover:text-white/58 ${uploading ? 'pointer-events-none opacity-50' : ''}`}
         >
@@ -110,7 +113,8 @@ export default function ProjectAttachments({
             disabled={uploading}
           />
         </label>
-      </div>
+        </div>
+      )}
 
       {/* Grid */}
       {attachments.length > 0 ? (
@@ -129,7 +133,8 @@ export default function ProjectAttachments({
                     loading="lazy"
                   />
                   <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/70 via-transparent to-transparent p-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                    <div className="flex justify-end">
+                    {canManage && (
+                      <div className="flex justify-end">
                       <button
                         type="button"
                         onClick={() => { void handleDelete(att.id) }}
@@ -145,7 +150,8 @@ export default function ProjectAttachments({
                           </svg>
                         )}
                       </button>
-                    </div>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => setPreviewAttachment(att)}
@@ -159,21 +165,23 @@ export default function ProjectAttachments({
                 <div className="flex flex-col gap-2 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <FileIcon />
-                    <button
-                      type="button"
-                      onClick={() => { void handleDelete(att.id) }}
-                      disabled={deletingId === att.id}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/8 bg-surface-high/60 text-white/30 opacity-0 transition-[opacity,color] duration-150 group-hover:opacity-100 hover:text-red-300"
-                      aria-label="Remover"
-                    >
-                      {deletingId === att.id ? (
-                        <span className="h-3 w-3 animate-spin rounded-full border border-white/20 border-t-white/60" />
-                      ) : (
-                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                          <path d="M1 1l6 6M7 1l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                        </svg>
-                      )}
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => { void handleDelete(att.id) }}
+                        disabled={deletingId === att.id}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/8 bg-surface-high/60 text-white/30 opacity-0 transition-[opacity,color] duration-150 group-hover:opacity-100 hover:text-red-300"
+                        aria-label="Remover"
+                      >
+                        {deletingId === att.id ? (
+                          <span className="h-3 w-3 animate-spin rounded-full border border-white/20 border-t-white/60" />
+                        ) : (
+                          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                            <path d="M1 1l6 6M7 1l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
                   </div>
 
                   <div className="min-w-0">

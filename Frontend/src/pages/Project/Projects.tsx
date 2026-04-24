@@ -181,7 +181,7 @@ export default function Projects() {
   }
 
   function handleSelectProject(project: ProjectDTO) {
-    setCurrentProject({ id: project.id, name: project.name })
+    setCurrentProject({ id: project.id, name: project.name, current_user_role: project.current_user_role })
     navigate(`/projects/${project.id}/sobre`)
   }
 

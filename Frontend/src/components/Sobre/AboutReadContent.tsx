@@ -28,6 +28,7 @@ export default function AboutReadContent({
   onStartEditing,
   canEditProject,
   canManageMembers,
+  currentUserId,
   memberEmailQuery,
   selectedRole,
   memberLookup,
@@ -50,20 +51,21 @@ export default function AboutReadContent({
   onStartEditing: (sectionId?: string) => void
   canEditProject: boolean
   canManageMembers: boolean
+  currentUserId: string | null
   memberEmailQuery: string
-  selectedRole: ProjectMemberRole
+  selectedRole: Exclude<ProjectMemberRole, 'admin'>
   memberLookup: UserLookupDTO | null
   memberSearchLoading: boolean
   memberMutationLoading: string | null
   memberError: string | null
   onMemberEmailChange: (value: string) => void
-  onRoleChange: (role: ProjectMemberRole) => void
+  onRoleChange: (role: Exclude<ProjectMemberRole, 'admin'>) => void
   onSearchMember: () => void
   onAddMember: () => void
-  onUpdateMemberRole: (memberId: string, role: ProjectMemberRole) => void
+  onUpdateMemberRole: (memberId: string, role: Exclude<ProjectMemberRole, 'admin'>) => void
   onRemoveMember: (memberId: string) => void
 }) {
-  const roleOptions: ProjectMemberRole[] = ['admin', 'editor', 'viewer']
+  const roleOptions: Exclude<ProjectMemberRole, 'admin'>[] = ['editor', 'viewer']
 
   function EditBadge({ sectionId }: { sectionId: string }) {
     if (!canEditProject) return null
@@ -297,7 +299,7 @@ export default function AboutReadContent({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-0.5 rounded-lg border border-white/8 bg-surface-base/60 p-0.5">
+                <div className="grid grid-cols-2 gap-0.5 rounded-lg border border-white/8 bg-surface-base/60 p-0.5">
                   {roleOptions.map((role) => (
                     <button
                       key={role}
@@ -375,13 +377,13 @@ export default function AboutReadContent({
                         <div className="relative">
                           <select
                             value={member.role}
-                            onChange={(e) => onUpdateMemberRole(member.id, e.target.value as ProjectMemberRole)}
-                            disabled={memberMutationLoading === member.id}
+                            onChange={(e) => onUpdateMemberRole(member.id, e.target.value as Exclude<ProjectMemberRole, 'admin'>)}
+                            disabled={memberMutationLoading === member.id || member.user_id === currentUserId || member.role === 'admin'}
                             className="appearance-none rounded-lg border border-white/10 bg-surface-base py-1.5 pl-2 pr-6 text-[10px] font-medium text-white/60 outline-none transition-opacity disabled:opacity-45"
                           >
-                            <option value="admin">Administrador</option>
                             <option value="editor">Editor</option>
                             <option value="viewer">Visualizador</option>
+                            {member.role === 'admin' && <option value="admin">Administrador</option>}
                           </select>
                           <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-white/28">
                             <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -392,7 +394,7 @@ export default function AboutReadContent({
                         <button
                           type="button"
                           onClick={() => onRemoveMember(member.id)}
-                          disabled={memberMutationLoading === member.id}
+                          disabled={memberMutationLoading === member.id || member.user_id === currentUserId}
                           aria-label={`Remover ${member.user.name}`}
                           className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-400/16 bg-red-400/8 text-red-200/64 transition-[border-color,color,opacity] duration-150 hover:border-red-400/30 hover:text-red-200/90 disabled:opacity-40"
                         >

@@ -201,7 +201,7 @@ export default function NewProjectFlow({
           scope: projectDraft.scope || null,
         },
       })
-      setCurrentProject({ id: data.id, name: data.name })
+      setCurrentProject({ id: data.id, name: data.name, current_user_role: data.current_user_role })
       setCreatedProjectId(data.id)
       setPhase('attachments')
     } catch {

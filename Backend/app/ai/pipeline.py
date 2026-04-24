@@ -2,7 +2,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import cast, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
@@ -14,6 +13,7 @@ from app.ai.providers.base import AIProviderError
 from app.ai.registry import get_embedding_provider, get_llm_provider
 from app.ai.schema import AIAnswerDraft, to_payload_dict
 from app.core.config import get_settings
+from app.core.utils import APP_TIMEZONE, STATUS_LABELS, truncate, today_bounds_utc
 from app.models.knowledge import KnowledgeChunk
 from app.models.task import Task
 
@@ -22,32 +22,10 @@ logger = logging.getLogger(__name__)
 # Constantes espelhadas de knowledge_service para evitar importação circular.
 TASK_SNAPSHOT_SOURCE = "task_snapshot"
 TASK_UPDATE_SOURCE = "task_update"
-APP_TIMEZONE = ZoneInfo("America/Sao_Paulo")
 
-
-def _truncate(value: str | None, limit: int = 220) -> str:
-    if not value:
-        return ""
-    normalized = " ".join(value.split())
-    if len(normalized) <= limit:
-        return normalized
-    return f"{normalized[: limit - 1].rstrip()}..."
-
-
-def _today_bounds_utc() -> tuple[datetime, datetime]:
-    today = datetime.now(APP_TIMEZONE).date()
-    start_local = datetime.combine(today, datetime.min.time(), tzinfo=APP_TIMEZONE)
-    end_local = start_local + timedelta(days=1)
-    return start_local.astimezone(timezone.utc), end_local.astimezone(timezone.utc)
-
-
-STATUS_LABELS = {
-    "todo": "A fazer",
-    "in_progress": "Em andamento",
-    "done": "Concluída",
-    "blocked": "Bloqueada",
-    "cancelled": "Cancelada",
-}
+# Aliases locais para manter assinaturas internas
+_truncate = truncate
+_today_bounds_utc = today_bounds_utc
 
 
 def _chunk_to_prompt_dict(

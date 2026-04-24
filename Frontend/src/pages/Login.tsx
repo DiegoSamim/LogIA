@@ -26,9 +26,18 @@ export default function Login() {
       setCurrentUser(user)
       navigate('/projects')
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })
-        ?.response?.data?.detail
-      setError(msg ?? 'Erro ao entrar. Verifique suas credenciais.')
+      const httpErr = err as { response?: { status?: number; data?: { detail?: string } } }
+      const httpStatus = httpErr?.response?.status
+      const detail = httpErr?.response?.data?.detail
+      if (!httpStatus) {
+        setError('Serviço indisponível. Verifique sua conexão.')
+      } else if (httpStatus === 401) {
+        setError('E-mail ou senha incorretos.')
+      } else if (httpStatus === 403) {
+        setError('Conta desativada. Entre em contato com o suporte.')
+      } else {
+        setError(detail ?? 'Erro ao entrar. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }

@@ -141,6 +141,7 @@ export default function Projects() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [projects, setProjects] = useState<ProjectDTO[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const { logout, setCurrentProject } = useAppStore()
@@ -150,7 +151,7 @@ export default function Projects() {
     projectService
       .list()
       .then(({ data }) => setProjects(data))
-      .catch(() => {})
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -318,6 +319,18 @@ export default function Projects() {
             {loading ? (
               <div className="col-span-1 flex items-center justify-center rounded-card border border-white/6 bg-surface-container/50 py-16 sm:col-span-1 lg:col-span-2">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-accent-indigo/60" />
+              </div>
+            ) : fetchError ? (
+              <div className="col-span-1 flex flex-col items-center justify-center rounded-card border border-rose-400/14 bg-rose-400/6 px-6 py-16 text-center sm:col-span-1 lg:col-span-2">
+                <p className="text-sm font-medium text-rose-300/80">Não foi possível carregar os projetos.</p>
+                <p className="mt-1 text-xs text-white/36">Verifique sua conexão e tente novamente.</p>
+                <button
+                  type="button"
+                  onClick={() => { setFetchError(false); setLoading(true); projectService.list().then(({ data }) => setProjects(data)).catch(() => setFetchError(true)).finally(() => setLoading(false)) }}
+                  className="mt-4 rounded-[6px] border border-white/10 px-3 py-1.5 text-xs text-white/60 hover:border-white/20 hover:text-white/84"
+                >
+                  Tentar novamente
+                </button>
               </div>
             ) : filtered.length > 0 ? (
               filtered.map((project) => (

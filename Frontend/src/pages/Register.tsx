@@ -48,9 +48,14 @@ export default function Register() {
       setCurrentUser(user)
       navigate('/projects')
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })
-        ?.response?.data?.detail
-      setError(msg ?? 'Erro ao criar conta. Tente novamente.')
+      const httpErr = err as { response?: { status?: number; data?: { detail?: string } } }
+      const httpStatus = httpErr?.response?.status
+      const detail = httpErr?.response?.data?.detail
+      if (!httpStatus) {
+        setError('Serviço indisponível. Verifique sua conexão.')
+      } else {
+        setError(detail ?? 'Erro ao criar conta. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }

@@ -56,7 +56,11 @@ export function useAuthProfile() {
           setCurrentUser(data)
         }
       })
-      .catch(() => {})
+      .catch((err: unknown) => {
+        if (import.meta.env.DEV) {
+          console.error('[useAuthProfile] falha ao buscar /auth/me', err)
+        }
+      })
 
     return () => {
       cancelled = true

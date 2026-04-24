@@ -112,6 +112,13 @@ export default function TaskRegisterFlow({
   const [error, setError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  const messageList = useMemo(
+    () => messages.map((message) => (
+      <ChatMessage key={message.id} message={message} userInitials={userInitials} />
+    )),
+    [messages, userInitials],
+  )
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, phase, tasks])
@@ -640,9 +647,7 @@ export default function TaskRegisterFlow({
     <>
       <section className="chat-card-enter relative flex h-full min-h-0 flex-1 flex-col rounded-[5px] border border-white/7 bg-[linear-gradient(180deg,rgba(19,22,30,0.88),rgba(13,15,20,0.88))] backdrop-blur-xl">
         <div ref={scrollRef} className="chat-scroll flex-1 min-h-0 space-y-6 overflow-y-auto px-4 py-5 sm:px-5">
-          {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} userInitials={userInitials} />
-          ))}
+          {messageList}
 
           {loading && (
             <div className="chat-card-enter flex items-start gap-4">

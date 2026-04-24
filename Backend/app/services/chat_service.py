@@ -3,7 +3,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
 from sqlalchemy import cast, or_, select
@@ -15,6 +14,7 @@ from app.ai.pipeline import generate_query_answer, _normalize_blockers_payload, 
 from app.ai.panel import build_query_panel_payload
 from app.ai.providers.base import AIProviderError
 from app.core.config import get_settings
+from app.core.utils import APP_TIMEZONE, STATUS_LABELS, status_label, truncate, today_bounds_utc
 from app.db.engine import AsyncSessionLocal
 from app.models.chat import ChatMessage, ChatSession, QueryRun
 from app.models.knowledge import KnowledgeChunk
@@ -49,41 +49,18 @@ TERMINAL_RUN_STATUSES = {"completed", "failed", "cancelled"}
 ACTIVE_RUN_STATUSES = {"pending", "running"}
 PRESENTATION_VERSION = 1
 SECTION_ITEM_LIMIT = 5
-APP_TIMEZONE = ZoneInfo("America/Sao_Paulo")
-
-
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _today_bounds_utc() -> tuple[datetime, datetime]:
-    today = datetime.now(APP_TIMEZONE).date()
-    start_local = datetime.combine(today, datetime.min.time(), tzinfo=APP_TIMEZONE)
-    end_local = start_local + timedelta(days=1)
-    return start_local.astimezone(timezone.utc), end_local.astimezone(timezone.utc)
 
 
 def _touch_session(session: ChatSession) -> None:
     session.updated_at = _now()
 
 
-def _truncate(value: str | None, limit: int = 180) -> str:
-    if not value:
-        return ""
-    normalized = " ".join(value.split())
-    if len(normalized) <= limit:
-        return normalized
-    return f"{normalized[: limit - 1].rstrip()}…"
-
-
-def _status_label(status_value: str | None) -> str:
-    return {
-        "todo": "A fazer",
-        "in_progress": "Em andamento",
-        "done": "Concluida",
-        "blocked": "Bloqueada",
-        "cancelled": "Cancelada",
-    }.get(status_value or "", "Status nao informado")
+# Aliases locais para manter assinaturas internas sem alterar todos os call-sites
+_truncate = truncate
+_status_label = status_label
+_today_bounds_utc = today_bounds_utc
 
 
 def _source_label(source_type: str | None, update_type: str | None = None) -> str:
@@ -817,6 +794,32 @@ async def _resolve_query_answer(
     }
 
 
+def _enrich_chunk_metadata_from_task(chunks: list[KnowledgeChunk]) -> dict[uuid.UUID, Task]:
+    """Popula chunk_metadata com campos da Task usando o relationship já carregado.
+    Requer que os chunks tenham sido buscados com selectinload(KnowledgeChunk.task)."""
+    task_lookup: dict[uuid.UUID, Task] = {}
+    for chunk in chunks:
+        if not chunk.task_id or not chunk.task:
+            continue
+        task = chunk.task
+        task_lookup[chunk.task_id] = task
+        metadata = dict(chunk.chunk_metadata or {})
+        metadata["task_title"] = task.title
+        metadata["task_status"] = task.status
+        metadata["task_category"] = task.category
+        metadata["task_priority"] = task.priority
+        metadata["task_hours"] = task.hours_worked
+        metadata["task_created_at"] = task.created_at.isoformat() if task.created_at else None
+        metadata["task_updated_at"] = task.updated_at.isoformat() if task.updated_at else None
+        metadata["blocked_reason"] = task.blocked_reason
+        metadata["next_steps"] = task.next_steps
+        metadata["what_was_done"] = task.what_was_done
+        metadata["technical_approach"] = task.technical_approach
+        metadata["task_tags"] = task.tags or []
+        chunk.chunk_metadata = metadata
+    return task_lookup
+
+
 async def _build_mock_query_answer(
     db: AsyncSession,
     project_id: uuid.UUID,
@@ -826,31 +829,6 @@ async def _build_mock_query_answer(
     """Pipeline mock: monta o QueryAnswerPayload com SQL + templates, sem LLM.
     Mantido como fallback para quando a IA está desabilitada ou falha.
     Garante que o modo consulta funcione mesmo sem GEMINI_API_KEY configurada."""
-    async def enrich_chunks_with_tasks(chunks: list[KnowledgeChunk]) -> dict[uuid.UUID, Task]:
-        task_ids = {chunk.task_id for chunk in chunks if chunk.task_id}
-        if not task_ids:
-            return {}
-        result = await db.execute(select(Task).where(Task.id.in_(task_ids)))
-        tasks = {task.id: task for task in result.scalars().all()}
-        for chunk in chunks:
-            if not chunk.task_id or chunk.task_id not in tasks:
-                continue
-            task = tasks[chunk.task_id]
-            metadata = dict(chunk.chunk_metadata or {})
-            metadata["task_title"] = task.title
-            metadata["task_status"] = task.status
-            metadata["task_category"] = task.category
-            metadata["task_priority"] = task.priority
-            metadata["task_hours"] = task.hours_worked
-            metadata["task_created_at"] = task.created_at.isoformat() if task.created_at else None
-            metadata["task_updated_at"] = task.updated_at.isoformat() if task.updated_at else None
-            metadata["blocked_reason"] = task.blocked_reason
-            metadata["next_steps"] = task.next_steps
-            metadata["what_was_done"] = task.what_was_done
-            metadata["technical_approach"] = task.technical_approach
-            metadata["task_tags"] = task.tags or []
-            chunk.chunk_metadata = metadata
-        return tasks
 
     def with_panel(
         chunks: list[KnowledgeChunk],
@@ -876,11 +854,12 @@ async def _build_mock_query_answer(
                 KnowledgeChunk.source_type == TASK_SNAPSHOT_SOURCE,
                 cast(KnowledgeChunk.chunk_metadata, JSONB)["task_status"].astext.notin_(["done", "cancelled"]),
             )
+            .options(selectinload(KnowledgeChunk.task))
             .order_by(KnowledgeChunk.updated_at.desc())
             .limit(18)
         )
         chunks = list(result.scalars().all())
-        task_lookup = await enrich_chunks_with_tasks(chunks)
+        task_lookup = _enrich_chunk_metadata_from_task(chunks)
         answer_payload, references, fallback_text = _build_open_tasks_answer(chunks)
         answer_payload = _normalize_open_tasks_payload(answer_payload, chunks, task_lookup)
         return with_panel(chunks, (answer_payload, references, fallback_text))
@@ -895,11 +874,12 @@ async def _build_mock_query_answer(
                     cast(KnowledgeChunk.chunk_metadata, JSONB)["task_status"].astext == "blocked",
                 ),
             )
+            .options(selectinload(KnowledgeChunk.task))
             .order_by(KnowledgeChunk.updated_at.desc())
             .limit(6)
         )
         chunks = list(result.scalars().all())
-        task_lookup = await enrich_chunks_with_tasks(chunks)
+        task_lookup = _enrich_chunk_metadata_from_task(chunks)
         answer_payload, references, fallback_text = _build_blockers_answer(chunks)
         answer_payload = _normalize_blockers_payload(answer_payload, chunks, task_lookup)
         return with_panel(chunks, (answer_payload, references, fallback_text))

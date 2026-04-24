@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import (
@@ -31,6 +31,17 @@ async def _cleanup_refresh_tokens(db: AsyncSession, user_id: uuid.UUID) -> None:
             (RefreshToken.revoked_at.is_not(None)) | (RefreshToken.expires_at <= _now()),
         )
     )
+
+
+async def cleanup_all_expired_tokens(db: AsyncSession) -> int:
+    """Remove all expired or revoked refresh tokens across all users."""
+    result = await db.execute(
+        delete(RefreshToken).where(
+            (RefreshToken.revoked_at.is_not(None)) | (RefreshToken.expires_at <= _now()),
+        )
+    )
+    await db.commit()
+    return result.rowcount  # type: ignore[return-value]
 
 
 async def _find_refresh_token(

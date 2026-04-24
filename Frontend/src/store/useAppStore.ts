@@ -37,7 +37,10 @@ export const useAppStore = create<AppState>()(
       setAuthReady: (ready) => set({ authReady: ready }),
       setCurrentProject: (project) => set({ currentProject: project }),
       setCurrentTaskTitle: (title) => set({ currentTaskTitle: title }),
-      logout: () => set({ accessToken: null, currentUser: null, authReady: true, currentProject: null, currentTaskTitle: null }),
+      logout: () => {
+        localStorage.removeItem('logia-app')
+        set({ accessToken: null, currentUser: null, authReady: true, currentProject: null, currentTaskTitle: null })
+      },
     }),
     {
       name: 'logia-app',

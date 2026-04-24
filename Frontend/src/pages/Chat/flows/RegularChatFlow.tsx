@@ -67,25 +67,6 @@ export default function RegularChatFlow({
   }, [activeSessionId, latestAnswerMessage?.id, activeRun?.id])
 
   useEffect(() => {
-    if (!latestAnswerMessage) return
-
-    const metadata = latestAnswerMessage.metadata
-    const answerSource = metadata?.answer_source ?? 'unknown'
-    const aiUsed = metadata?.ai_used === true
-
-    console.log('[LogIA Query] resposta recebida', {
-      messageId: latestAnswerMessage.id,
-      questionKey: metadata?.question_key,
-      answerSource,
-      aiUsed,
-      aiTrace: metadata?.ai_trace,
-      hasAnswerPayload: Boolean(metadata?.answer_payload),
-      hasPanelPayload: Boolean(metadata?.panel_payload),
-      references: Array.isArray(metadata?.references) ? metadata.references.length : 0,
-    })
-  }, [latestAnswerMessage])
-
-  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [activeMessages.length, activeRun?.id, activeRun?.status, activeSessionId])
 

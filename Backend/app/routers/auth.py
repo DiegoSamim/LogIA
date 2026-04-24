@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Cookie, Depends, Request, Response
+from typing import Literal
+
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -7,7 +10,7 @@ from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 from app.schemas.user import UserResponse
-from app.services import auth_service
+from app.services import auth_service, oauth_service
 
 router = APIRouter()
 settings = get_settings()
@@ -91,3 +94,62 @@ async def logout(
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: User = Depends(get_current_user)):
     return UserResponse.from_orm(current_user)
+
+
+# ── OAuth Social Login ────────────────────────────────────────────────────────
+
+@router.get("/{provider}/authorize")
+async def oauth_authorize(provider: Literal["google", "github"]):
+    state = oauth_service.generate_oauth_state()
+    if provider == "google":
+        url = oauth_service.get_google_authorize_url(state)
+    else:
+        url = oauth_service.get_github_authorize_url(state)
+    return {"url": url}
+
+
+@router.get("/{provider}/callback")
+async def oauth_callback(
+    provider: Literal["google", "github"],
+    code: str,
+    state: str,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    if not oauth_service.verify_oauth_state(state):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="State OAuth inválido ou expirado.")
+
+    if provider == "google":
+        user_info = await oauth_service.exchange_google_code(code)
+    else:
+        user_info = await oauth_service.exchange_github_code(code)
+
+    user = await oauth_service.find_or_create_user(
+        db,
+        provider=provider,
+        provider_user_id=user_info["provider_user_id"],
+        email=user_info["email"],
+        name=user_info["name"],
+        avatar_url=user_info.get("avatar_url"),
+    )
+
+    user_agent = request.headers.get("user-agent")
+    ip = request.client.host if request.client else None
+    access_token, raw_refresh = await auth_service._issue_tokens(db, user, user_agent=user_agent, ip=ip)
+    await db.commit()
+
+    redirect = RedirectResponse(
+        url=f"{settings.FRONTEND_URL}/auth/callback?token={access_token}",
+        status_code=302,
+    )
+    redirect.set_cookie(
+        key=REFRESH_COOKIE,
+        value=raw_refresh,
+        httponly=True,
+        samesite="lax",
+        secure=settings.APP_ENV == "production",
+        max_age=COOKIE_MAX_AGE,
+        path="/api/v1/auth",
+    )
+    return redirect

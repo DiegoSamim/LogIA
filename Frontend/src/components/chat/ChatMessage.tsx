@@ -5,9 +5,11 @@ import UserAvatar from './UserAvatar'
 export default function ChatMessage({
   message,
   userInitials,
+  userAvatarUrl,
 }: {
   message: ChatMessageViewModel
   userInitials: string
+  userAvatarUrl?: string | null
 }) {
   const isAssistant = message.sender === 'assistant'
 
@@ -55,7 +57,7 @@ export default function ChatMessage({
           </div>
         )}
       </article>
-      {!isAssistant && <UserAvatar initials={userInitials} />}
+      {!isAssistant && <UserAvatar initials={userInitials} avatarUrl={userAvatarUrl} />}
     </div>
   )
 }

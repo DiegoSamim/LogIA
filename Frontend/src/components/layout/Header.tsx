@@ -28,7 +28,7 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
   const isChatRoute = pathname === '/chat'
 
   const { logout, currentProject, currentTaskTitle } = useAppStore()
-  const { displayName, email, initials } = useAuthProfile()
+  const { displayName, email, initials, avatarUrl } = useAuthProfile()
   const { mode, setMode } = useChatUiStore()
 
   const [menuOpen, setMenuOpen] = useState(false)
@@ -194,9 +194,15 @@ export default function Header({ isSidebarOpen, onOpenSidebar }: HeaderProps) {
             type="button"
             title={displayName ?? email ?? 'Conta'}
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-accent-indigo to-accent-violet text-[11px] font-bold text-white shadow-[0_0_0_2px_rgba(139,92,246,0.2)] transition-shadow duration-150 hover:shadow-[0_0_0_2px_rgba(139,92,246,0.4)]"
+            className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full shadow-[0_0_0_2px_rgba(139,92,246,0.2)] transition-shadow duration-150 hover:shadow-[0_0_0_2px_rgba(139,92,246,0.4)]"
           >
-            {initials}
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={displayName ?? 'avatar'} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center bg-linear-to-br from-accent-indigo to-accent-violet text-[11px] font-bold text-white">
+                {initials}
+              </span>
+            )}
           </button>
 
           {menuOpen && (

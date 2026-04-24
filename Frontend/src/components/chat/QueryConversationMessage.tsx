@@ -532,9 +532,11 @@ function QueryReport({ payload }: { payload: QueryAnswerPayload }) {
 export default function QueryConversationMessage({
   message,
   userInitials,
+  userAvatarUrl,
 }: {
   message: QueryConversationMessageItem
   userInitials: string
+  userAvatarUrl?: string | null
 }) {
   const isUser = message.sender === 'user'
   const isPending = message.state === 'pending'
@@ -581,7 +583,7 @@ export default function QueryConversationMessage({
           <p className="whitespace-pre-wrap text-[15px] leading-8">{message.content}</p>
         )}
       </article>
-      {isUser && <UserAvatar initials={userInitials} />}
+      {isUser && <UserAvatar initials={userInitials} avatarUrl={userAvatarUrl} />}
     </div>
   )
 }

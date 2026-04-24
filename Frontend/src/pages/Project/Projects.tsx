@@ -145,7 +145,7 @@ export default function Projects() {
   const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const { logout, setCurrentProject } = useAppStore()
-  const { displayName, email, initials } = useAuthProfile()
+  const { displayName, email, initials, avatarUrl } = useAuthProfile()
 
   useEffect(() => {
     projectService
@@ -237,11 +237,17 @@ export default function Projects() {
                   onClick={() => setMenuOpen((v) => !v)}
                   className="rounded-btn border border-white/8 bg-surface-container p-1.5 transition-[border-color,background-color] duration-150 hover:border-white/14 hover:bg-surface-high"
                 >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-linear-to-br from-accent-indigo to-accent-violet text-[10px] font-bold text-white">
-                    {initials || (
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="8" r="4" />
-                      </svg>
+                  <div className="flex h-7 w-7 overflow-hidden rounded-full">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-accent-indigo to-accent-violet text-[10px] font-bold text-white">
+                        {initials || (
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 21a8 8 0 0 0-16 0" /><circle cx="12" cy="8" r="4" />
+                          </svg>
+                        )}
+                      </div>
                     )}
                   </div>
                 </button>

@@ -51,6 +51,14 @@ class Settings(BaseSettings):
     # URL base do servidor Ollama local. Usado quando AI_PROVIDER=ollama.
     OLLAMA_BASE_URL: str = "http://localhost:11434"
 
+    # ── OAuth Social Login ────────────────────────────────────────────────────
+    # Credenciais obtidas em: console.cloud.google.com e github.com/settings/developers
+    # Se None, o provider correspondente fica desabilitado (retorna 501).
+    GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
+    GITHUB_CLIENT_ID: str | None = None
+    GITHUB_CLIENT_SECRET: str | None = None
+
 
 # Singleton com cache: instanciado uma vez por processo e reutilizado.
 # Evita re-leitura do .env a cada chamada get_settings().

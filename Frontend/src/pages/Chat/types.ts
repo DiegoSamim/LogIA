@@ -169,12 +169,14 @@ export interface TaskRegisterFlowProps {
   projectId: string | null
   projectName: string | null
   userInitials: string
+  userAvatarUrl?: string | null
   isPanelOpen: boolean
   onTogglePanel: (open: boolean) => void
 }
 
 export interface NewProjectFlowProps {
   userInitials: string
+  userAvatarUrl?: string | null
   isPanelOpen: boolean
   onTogglePanel: (open: boolean) => void
 }
@@ -183,6 +185,7 @@ export interface RegularChatFlowProps {
   projectId: string | null
   projectName: string | null
   userInitials: string
+  userAvatarUrl?: string | null
   isPanelOpen: boolean
   onTogglePanel: (open: boolean) => void
 }

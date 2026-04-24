@@ -93,6 +93,7 @@ export default function TaskRegisterFlow({
   projectId,
   projectName,
   userInitials,
+  userAvatarUrl,
   isPanelOpen,
   onTogglePanel,
 }: TaskRegisterFlowProps) {
@@ -114,9 +115,9 @@ export default function TaskRegisterFlow({
 
   const messageList = useMemo(
     () => messages.map((message) => (
-      <ChatMessage key={message.id} message={message} userInitials={userInitials} />
+      <ChatMessage key={message.id} message={message} userInitials={userInitials} userAvatarUrl={userAvatarUrl} />
     )),
-    [messages, userInitials],
+    [messages, userInitials, userAvatarUrl],
   )
 
   useEffect(() => {

@@ -59,4 +59,7 @@ export const authService = {
 
   me: () =>
     api.get<UserDTO>('/auth/me'),
+
+  getOAuthUrl: (provider: 'google' | 'github') =>
+    api.get<{ url: string }>(`/auth/${provider}/authorize`),
 }

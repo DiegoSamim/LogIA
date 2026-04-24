@@ -78,11 +78,13 @@ export function useAuthProfile() {
 
   const email = firstNonEmpty([currentUser?.email, tokenPayload?.email])
   const initials = getInitials(displayName ?? '')
+  const avatarUrl = currentUser?.avatar_url ?? null
 
   return {
     currentUser,
     displayName,
     email,
     initials,
+    avatarUrl,
   }
 }

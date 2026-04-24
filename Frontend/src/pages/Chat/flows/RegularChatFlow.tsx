@@ -15,6 +15,7 @@ const EMPTY_MESSAGES: ChatMessageDTO[] = []
 export default function RegularChatFlow({
   projectId,
   userInitials,
+  userAvatarUrl,
   isPanelOpen,
   onTogglePanel,
 }: RegularChatFlowProps) {
@@ -292,6 +293,7 @@ export default function RegularChatFlow({
                 key={message.id}
                 message={message}
                 userInitials={userInitials}
+                userAvatarUrl={userAvatarUrl}
               />
             ))
           ) : (

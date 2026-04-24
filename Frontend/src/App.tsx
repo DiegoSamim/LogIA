@@ -13,6 +13,7 @@ import Tasks from '@/pages/Tasks'
 import TaskDetail from '@/pages/TaskDetail'
 import Dashboard from '@/pages/Dashboard/Dashboard'
 import Catalog from '@/pages/Catalog/Catalog'
+import OAuthCallback from '@/pages/OAuthCallback'
 
 export default function App() {
   useAuthInit()
@@ -22,6 +23,7 @@ export default function App() {
       <Routes>
         {/* Sempre pública */}
         <Route path="/" element={<Home />} />
+        <Route path="/auth/callback" element={<OAuthCallback />} />
 
         {/* Só para não-logados — redireciona logados para /projects */}
         <Route element={<GuestRoute />}>

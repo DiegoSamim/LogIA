@@ -12,7 +12,7 @@ import './Chat.css'
 export default function Chat() {
   const [searchParams] = useSearchParams()
   const isNewProject = searchParams.get('intent') === 'new-project'
-  const { initials } = useAuthProfile()
+  const { initials, avatarUrl } = useAuthProfile()
   const { mode, setMode } = useChatUiStore()
   const { currentProject } = useAppStore()
   const [isPanelOpen, setIsPanelOpen] = useState(true)
@@ -49,6 +49,7 @@ export default function Chat() {
             {isNewProject ? (
               <NewProjectFlow
                 userInitials={userInitials}
+                userAvatarUrl={avatarUrl}
                 isPanelOpen={isPanelOpen}
                 onTogglePanel={setIsPanelOpen}
               />
@@ -57,6 +58,7 @@ export default function Chat() {
                 projectId={currentProject?.id ?? null}
                 projectName={currentProject?.name ?? null}
                 userInitials={userInitials}
+                userAvatarUrl={avatarUrl}
                 isPanelOpen={isPanelOpen}
                 onTogglePanel={setIsPanelOpen}
               />
@@ -65,6 +67,7 @@ export default function Chat() {
                 projectId={currentProject?.id ?? null}
                 projectName={currentProject?.name ?? null}
                 userInitials={userInitials}
+                userAvatarUrl={avatarUrl}
                 isPanelOpen={isPanelOpen}
                 onTogglePanel={setIsPanelOpen}
               />
